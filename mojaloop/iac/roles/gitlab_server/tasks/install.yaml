@@ -68,12 +68,12 @@
     dump: "0"
   when: ebs_volume_device_name | length > 0
  
-- name: Install GitLab repository
-  get_url:
-    url: https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
-    dest: /tmp/script.deb.sh
-    mode: 0777
-
+- name: Download GitLab repository install script using wget
+  ansible.builtin.command: >
+    wget -O /tmp/script.deb.sh https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
+  args:
+    creates: /tmp/script.deb.sh
+    
 - name: Run GitLab repository script
   shell: /tmp/script.deb.sh
 

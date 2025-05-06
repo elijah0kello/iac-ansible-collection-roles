@@ -54,6 +54,8 @@
   filesystem:
     fstype: ext4
     dev: "{{ ebs_volume_device_name }}"
+  when: ebs_volume_device_name | length > 0
+  ignore_errors: false
 
 - name: Mount backup vol
   ansible.posix.mount:
@@ -64,6 +66,7 @@
     opts: defaults
     passno: "1"
     dump: "0"
+  when: ebs_volume_device_name | length > 0
  
 - name: Install GitLab repository
   get_url:

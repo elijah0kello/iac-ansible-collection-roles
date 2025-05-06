@@ -73,7 +73,13 @@
     wget -O /tmp/script.deb.sh https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
   args:
     creates: /tmp/script.deb.sh
-    
+
+- name: Make GitLab install script executable
+  file:
+    path: /tmp/script.deb.sh
+    mode: '0755'
+    state: file
+
 - name: Run GitLab repository script
   shell: /tmp/script.deb.sh
 

@@ -17,11 +17,11 @@
   retries: 30
   delay: 10 # Every 10 seconds
 
-- name: "Install minio client"
-  get_url:
-    url: "{{ minio_client_download_url }}"
-    dest: "{{ minio_work_dir }}/mc"
-    mode: 0700
+- name: "Install minio client using wget"
+  shell: |
+    wget -q "{{ minio_client_download_url }}" -O "{{ minio_work_dir }}/mc" && chmod 0700 "{{ minio_work_dir }}/mc"
+  args:
+    creates: "{{ minio_work_dir }}/mc"
   when: not mc_installed.stat.exists
 
 - name: "Create minio alias"

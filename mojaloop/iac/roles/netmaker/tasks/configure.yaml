@@ -1,12 +1,15 @@
-- name: Wait netmaker api server to respond {{ netmaker_base_domain }}
-  shell: >
-    code=$(curl -s -o /dev/null -w "%{http_code}"
-    -H "Authorization: Bearer {{ netmaker_master_key }}"
-    "https://api.{{ netmaker_base_domain }}/api/networks");
-    echo "DEBUG: HTTP Status Code: $code" >&2;
+- name: Wait for Netmaker API to respond (with retries and debug)
+  shell: |
+    code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer {{ netmaker_master_key }}" \
+            --max-time 10 \
+            --retry 3 \
+            --retry-delay 5 \
+            "https://api.{{ netmaker_base_domain }}/api/networks" || echo "CURL_FAILED");
+    echo "HTTP Status: $code" >&2;
     echo "$code"
   register: _result
-  until: _result.stdout in ['200', '301', '302']
+  until: "_result.stdout in ['200', '301', '302']"
   retries: 30
   delay: 10
 

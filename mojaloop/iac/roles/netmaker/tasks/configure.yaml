@@ -7,16 +7,16 @@
   retries: 30
   delay: 10
 
-- name: Add admin user
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createadminuser.json.j2') }}"
-    body_format: json
-    status_code: [200, 400, 500]
+- name: Add admin user using curl
+  command: >
+    curl -s -o /dev/null -w "%{http_code}"
+    -X POST
+    -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    -d '@{{ playbook_dir }}/createadminuser.json'
+    https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
+  register: _result
+  failed_when: _result.stdout not in ["200", "400", "500"]
 
 - name: Get all existing networks 
   uri:

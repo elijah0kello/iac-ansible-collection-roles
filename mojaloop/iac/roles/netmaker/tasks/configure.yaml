@@ -7,13 +7,18 @@
   retries: 30
   delay: 10
 
+- name: Render createadminuser.json to /tmp
+  template:
+    src: createadminuser.json.j2
+    dest: /tmp/createadminuser.json'
+
 - name: Add admin user using curl
   command: >
     curl -s -o /dev/null -w "%{http_code}"
     -X POST
     -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
-    -d '@{{ playbook_dir }}/createadminuser.json'
+    -d @/tmp/createadminuser.json
     https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
   register: _result
   failed_when: _result.stdout not in ["200", "400", "500"]

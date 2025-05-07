@@ -43,14 +43,12 @@
     dest: "/etc/systemd/system/gitlab-runner.service.d/kill.conf"
   notify: Restart gitlab-runner
 
-- name: Wait Gitlab Server to respond
-  uri:
-    url: "{{ gitlab_external_url }}"
-    method: GET
-  register: _result
-  until: _result.status == 200
+- name: Wait for GitLab Server to respond using curl
+  command: curl -I -s -o /dev/null -w "%{http_code}" "{{ gitlab_external_url }}"
+  register: curl_result
+  until: curl_result.stdout == "200"
   retries: 30
-  delay: 10 # Every 10 seconds
+  delay: 10
 
 - name: Download ca from gitlab
   shell: |

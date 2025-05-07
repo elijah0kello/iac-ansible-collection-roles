@@ -1,15 +1,13 @@
-- name: Wait for Netmaker API to respond (with retries and debug)
+- name: Wait with wget (5x5 retry)
   shell: |
-    code=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer {{ netmaker_master_key }}" \
-            --max-time 10 \
-            --retry 3 \
-            --retry-delay 5 \
-            "https://api.{{ netmaker_base_domain }}/api/networks" || echo "CURL_FAILED");
-    echo "HTTP Status: $code" >&2;
-    echo "$code"
+    wget -q --spider \
+    --header="Authorization: Bearer {{ netmaker_master_key }}" \
+    --timeout=5 \
+    --tries=2 \
+    "https://api.{{ netmaker_base_domain }}/api/networks"
+    echo $?
   register: _result
-  until: "_result.stdout in ['200', '301', '302']"
+  until: "_result.stdout == '0'"  # 0 = success in wget
   retries: 5
   delay: 5
 

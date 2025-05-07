@@ -1,8 +1,12 @@
-- name: Wait for Netmaker API server to respond {{ netmaker_base_domain }}
-  shell: |
-    curl -s -L -o /dev/null -w "%{http_code}" -H "Authorization: Bearer {{ netmaker_master_key }}" https://api.{{ netmaker_base_domain }}/api/networks
+- name: Wait netmaker api server to respond {{ netmaker_base_domain }}
+  shell: >
+    code=$(curl -s -o /dev/null -w "%{http_code}"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    "https://api.{{ netmaker_base_domain }}/api/networks");
+    echo "DEBUG: HTTP Status Code: $code" >&2;
+    echo "$code"
   register: _result
-  until: _result.stdout is search("^(200|3[0-9][0-9])$")
+  until: _result.stdout in ['200', '301', '302']
   retries: 30
   delay: 10
 

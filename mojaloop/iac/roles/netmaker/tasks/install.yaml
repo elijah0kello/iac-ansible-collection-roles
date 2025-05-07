@@ -51,9 +51,11 @@
     name: "netmaker"
     state: started
 
-- name: Install nmctl
-  get_url:
-    url: https://github.com/gravitl/netmaker/releases/download/v{{ netmaker_image_version }}/nmctl-linux-amd64
-    dest: /usr/local/bin/nmctl
-    mode: 0700
+- name: Install nmctl using wget
+  shell: |
+    wget -q -O /usr/local/bin/nmctl "https://github.com/gravitl/netmaker/releases/download/v{{ netmaker_image_version }}/nmctl-linux-amd64"
+    chmod 700 /usr/local/bin/nmctl
+  args:
+    creates: /usr/local/bin/nmctl
+
   

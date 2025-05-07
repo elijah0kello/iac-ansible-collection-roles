@@ -1,4 +1,4 @@
-- name: Wait netmaker api server to respond
+- name: Wait netmaker api server to respond {{ netmaker_base_domain }}
   uri:
     url: https://api.{{ netmaker_base_domain }}/api/networks
     method: GET

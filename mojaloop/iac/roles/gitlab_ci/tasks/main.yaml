@@ -46,7 +46,7 @@
 - name: Wait for GitLab Server to respond using curl at "{{ gitlab_external_url }}"
   command: curl -I -s -o /dev/null -w "%{http_code}" "{{ gitlab_external_url }}"
   register: curl_result
-  until: curl_result.stdout == "200"
+  until: curl_result.stdout in ['200', '302']
   retries: 30
   delay: 10
 

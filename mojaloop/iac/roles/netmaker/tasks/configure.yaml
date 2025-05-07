@@ -1,17 +1,17 @@
-- name: Wait netmaker api server to respond {{ netmaker_base_domain }}
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: GET
-    headers:
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: 200,301,302  # Allow these status codes
-    validate_certs: no  # Bypass SSL verification if needed
-    timeout: 10  # Increase timeout
+- name: Wait for Netmaker API to respond (with retries and debug)
+  shell: |
+    code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer {{ netmaker_master_key }}" \
+            --max-time 10 \
+            --retry 3 \
+            --retry-delay 5 \
+            "https://api.{{ netmaker_base_domain }}/api/networks" || echo "CURL_FAILED");
+    echo "HTTP Status: $code" >&2;
+    echo "$code"
   register: _result
-  until: _result.status in [200,301,302]
+  until: "_result.stdout in ['200', '301', '302']"
   retries: 5
   delay: 5
-  ignore_errors: yes
 
 - name: Add admin user
   uri:

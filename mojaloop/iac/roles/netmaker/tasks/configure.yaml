@@ -10,8 +10,8 @@
     echo "$code"
   register: _result
   until: "_result.stdout in ['200', '301', '302']"
-  retries: 30
-  delay: 10
+  retries: 5
+  delay: 5
 
 - name: Add admin user
   uri:

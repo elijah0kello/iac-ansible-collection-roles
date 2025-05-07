@@ -1,15 +1,17 @@
-- name: Wait with wget (5x5 retry)
-  shell: |
-    wget -q --spider \
-    --header="Authorization: Bearer {{ netmaker_master_key }}" \
-    --timeout=5 \
-    --tries=2 \
-    "https://api.{{ netmaker_base_domain }}/api/networks"
-    echo $?
+- name: Wait netmaker api server to respond {{ netmaker_base_domain }}
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/networks
+    method: GET
+    headers:
+      Authorization: Bearer {{ netmaker_master_key }}
+    status_code: 200,301,302  # Allow these status codes
+    validate_certs: no  # Bypass SSL verification if needed
+    timeout: 10  # Increase timeout
   register: _result
-  until: "_result.stdout == '0'"  # 0 = success in wget
+  until: _result.status in [200,301,302]
   retries: 5
   delay: 5
+  ignore_errors: yes
 
 - name: Add admin user
   uri:

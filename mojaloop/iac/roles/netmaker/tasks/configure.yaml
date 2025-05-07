@@ -14,93 +14,82 @@
   delay: 5
 
 - name: Add admin user
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createadminuser.json.j2') }}"
-    body_format: json
-    status_code: [200, 400, 500]
+  shell: |
+    curl -s -o /dev/null -w "%{http_code}" \
+      -X POST \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      -d '{{ lookup("template", "createadminuser.json.j2") }}' \
+      "https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
+  register: result
+  failed_when: "result.stdout not in ['200', '400', '500']"
+  changed_when: result.stdout == '200'
 
-- name: Get all existing networks 
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
-  register: existing_netmaker_networks  
-
+- name: Get all existing networks
+  shell: |
+    curl -s \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      "https://api.{{ netmaker_base_domain }}/api/networks"
+  register: existing_netmaker_networks
+  args:
+    warn: false
 
 - name: Compose the new network list
   set_fact:
     new_netmaker_networks: '{{ ( new_netmaker_networks | list ) + ( [ {"network_name": item.network_name, "node_keys": item.node_keys, "network_cidr": item.network_cidr }] | list )}}'
-  when: ( existing_netmaker_networks.content | from_json ) | selectattr('netid', 'equalto', item.network_name) | list | count == 0 
+  when: ( existing_netmaker_networks.stdout | from_json ) | selectattr('netid', 'equalto', item.network_name) | list | count == 0 
   with_items: "{{ netmaker_networks }}"    
 
 - name: Create new networks in netmaker
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createnetwork.json.j2') }}"
-    body_format: json
-    status_code: [200]
+  shell: |
+    curl -s -o /dev/null -w "%{http_code}" \
+      -X POST \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      -d '{{ lookup("template", "createnetwork.json.j2") }}' \
+      "https://api.{{ netmaker_base_domain }}/api/networks"
+  register: result
   loop: "{{ new_netmaker_networks }}"
+  changed_when: result.stdout == '200'
 
 - name: Get keys
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
+  shell: |
+    curl -s \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   register: key_response
+  args:
+    warn: false
 
 - name: Add key for control network for netclient
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createkey.json.j2') }}"
-    body_format: json
-    status_code: [200, 400]
+  shell: |
+    curl -s -o /dev/null -w "%{http_code}" \
+      -X POST \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      -d '{{ lookup("template", "createkey.json.j2") }}' \
+      "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
+  register: result
   vars:
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
-  when: "( key_response.content  | from_json ) | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0"
+  when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
+  failed_when: "result.stdout not in ['200', '400']"
 
 - name: Get keys again
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
+  shell: |
+    curl -s \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   register: key_response2
+  args:
+    warn: false
 
 - name: copy keys
   copy: 
-    content: "{{ key_response2.content }}"
+    content: "{{ key_response2.stdout }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
-
-# - name: Save access token for bastion netclient
-#   vars:
-#     query: "[?tags[0]=='{{ netmaker_control_network_name }}-access'].token"
-#   set_fact:
-#     netmaker_control_network_access_string: "{{ key_response2.json | json_query(query) | first }}"

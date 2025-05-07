@@ -44,7 +44,7 @@
     url: "{{ gitlab_external_url }}"
     method: GET
   register: _result
-  until: _result.status == 200
+  until: curl_result.stdout in ['200', '302']
   retries: 30
   delay: 10 # Every 10 seconds
 

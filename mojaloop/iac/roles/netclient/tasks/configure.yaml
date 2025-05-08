@@ -2,6 +2,33 @@
   shell: "netclient list"
   register: _result
 ##get networks from netclient command line netclient list, loop over networks with nodeid
+- name: Get networks from netclient list
+  ansible.builtin.command: netclient list
+  register: netclient_network_list
+
+- name: Parse netclient network list and set facts
+  ansible.builtin.set_fact:
+    egress_gw_items: >-
+      {% set items = [] %}
+      {% for line in netclient_network_list.stdout_lines %}
+        {% if 'Network:' in line and 'Node ID:' in line %}
+          {% set parts = line.split() %}
+          {% set network = none %}
+          {% set node_id = none %}
+          {% for part in parts %}
+            {% if 'Network:' in part %}
+              {% set network = part.split(':')[1].strip() %}
+            {% elif 'Node' in part and 'ID:' in parts[loop.index] %}
+              {% set node_id = parts[loop.index + 1].strip() %}
+            {% endif %}
+          {% endfor %}
+          {% if network and node_id %}
+            {% set items = items + [{'network': network, 'node_id': node_id}] %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {{ items }}
+
 - name: Add egress gw using curl
   ansible.builtin.command: >
     curl -X POST
@@ -10,14 +37,14 @@
     -d "@{{ playbook_dir }}/creategw.json.j2"
     "https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}/creategateway"
   register: create_gw_output
-  until: create_gw_output.rc == 0 or (create_gw_output.rc == 7 and 'already a gateway' in create_gw_output.stderr) # rc 7 is usually "Couldn't connect to server" or similar, adjust as needed for 400 equivalent
+  until: create_gw_output.rc == 0 or (create_gw_output.rc == 7 and 'already a gateway' in create_gw_output.stderr) # Adjust rc for "already a gateway" if needed
   retries: 3
   delay: 5
-  loop: "{{ _result.stdout | from_json }}"
+  loop: "{{ egress_gw_items }}"
   changed_when: create_gw_output.rc == 0
   failed_when: create_gw_output.rc != 0 and 'already a gateway' not in create_gw_output.stderr
 
 - name: Debug egress gw creation
   ansible.builtin.debug:
     msg: "Egress GW creation response for {{ item.network }}/{{ item.node_id }}: {{ create_gw_output.stdout | default(create_gw_output.stderr) }}"
-  loop: "{{ _result.stdout | from_json }}"
+  loop: "{{ egress_gw_items }}"

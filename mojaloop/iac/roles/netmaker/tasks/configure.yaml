@@ -50,6 +50,9 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/networks"
   register: existing_netmaker_networks
+  # echo the curl request
+  debug:
+    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/networks' Response: {{ existing_netmaker_networks.stdout }}"
   retries: 3  # Add retries
   delay: 5    # Add a delay between retries
   until: existing_netmaker_networks.rc == 0
@@ -65,7 +68,7 @@
 
 - name: Compose the new network list
   set_fact:
-    new_netmaker_networks: "{{ ( new_netmaker_networks | list ) + ( [ {\"network_name\": item.network_name, \"node_keys\": item.node_keys, \"network_cidr\": item.network_cidr }] | list ) }}"
+    new_netmaker_networks: "{{ ( new_netmaker_networks | list ) + ( [{\"network_name\": item.network_name, \"node_keys\": item.node_keys, \"network_cidr\": item.network_cidr }] | list ) }}"
   when: ( existing_netmaker_networks.stdout | from_json ) | selectattr('netid', 'equalto', item.network_name) | list | count == 0
   with_items: "{{ netmaker_networks }}"
 
@@ -82,6 +85,8 @@
   register: create_network_output
   until: create_network_output.rc == 0
   loop: "{{ new_netmaker_networks }}"
+  with_items: "{{ new_netmaker_networks }}" # Corrected line
+
 
 - name: Get keys
   command: >

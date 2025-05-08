@@ -1,16 +1,16 @@
 - name: Wait for Netmaker API server to respond using curl
   command: >
-    curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer {{ netmaker_master_key }}" 
+    curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/networks
   register: _result
   # echo the curl request
-  debug:
-    msg: "curl -s -o /dev/null -w \"%{http_code}\" -H \"Authorization: Bearer {{ netmaker_master_key }}\" https://api.{{ netmaker_base_domain }}/api/networks"
+- debug:
+    msg: "curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer {{ netmaker_master_key }}' https://api.{{ netmaker_base_domain }}/api/networks"
   until: _result.stdout == "200"
   retries: 30
   delay: 10
 
-- name: Render createadminuser.json to /tmp 
+- name: Render createadminuser.json to /tmp
   template:
     src: createadminuser.json.j2
     dest: /tmp/createadminuser.json
@@ -33,8 +33,8 @@
     -d @/tmp/createadminuser.json
     https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
   # echo the curl request
-  debug:
-    msg: "curl -s -o /dev/null -w \"%{http_code}\" -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer {{ netmaker_master_key }}\" -d @/tmp/createadminuser.json https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
+- debug:
+    msg: "curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d @/tmp/createadminuser.json https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
   register: _result
   failed_when: _result.stdout not in ["200", "400", "500"]
 
@@ -45,7 +45,7 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/networks"
   # echo the curl request
-  debug:
+- debug:
     msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/networks'"
   register: existing_netmaker_networks
   until: existing_netmaker_networks.rc == 0
@@ -55,7 +55,6 @@
     new_netmaker_networks: "{{ ( new_netmaker_networks | list ) + ( [ {\"network_name\": item.network_name, \"node_keys\": item.node_keys, \"network_cidr\": item.network_cidr }] | list ) }}"
   when: ( existing_netmaker_networks.stdout | from_json ) | selectattr('netid', 'equalto', item.network_name) | list | count == 0
   with_items: "{{ netmaker_networks }}"
-  
 
 - name: Create new networks in netmaker
   command: >
@@ -65,7 +64,7 @@
     -d "{{ lookup('template', 'createnetwork.json.j2') }}"
     "https://api.{{ netmaker_base_domain }}/api/networks"
   # echo the curl request
-  debug:
+- debug:
     msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createnetwork.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/networks'"
   register: create_network_output
   until: create_network_output.rc == 0
@@ -78,7 +77,7 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   # echo the curl request
-  debug:
+- debug:
     msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys'"
   register: key_response
   until: key_response.rc == 0
@@ -91,10 +90,10 @@
     -d "{{ lookup('template', 'createkey.json.j2') }}"
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   # echo the curl request
-  debug:
+- debug:
     msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createkey.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys'"
   register: add_key_response
-  until: add_key_response.rc == 0 or ('400' in add_key_response.stdout and 'already exists' in add_key_response.stdout)
+  until: "add_key_response.rc == 0 or ('400' in add_key_response.stdout and 'already exists' in add_key_response.stdout)"
   vars:
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
   when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', [keytag]) | list | count == 0"
@@ -102,7 +101,7 @@
 
 - name: Create directory for enrollment key list file
   ansible.builtin.file:
-    path: "{{ /tmp/keylist.json | dirname }}"
+    path: "{{ netmaker_enrollment_key_list_file_location | dirname }}"
     state: directory
     mode: '0755'  # Ensure the directory has appropriate permissions
 
@@ -112,16 +111,12 @@
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
-    -o /tmp/keylist.json
+    -o "{{ netmaker_enrollment_key_list_file_location }}"
   # echo the curl request
-  debug:
+- debug:
     msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys' -o '{{ netmaker_enrollment_key_list_file_location }}'"
   register: key_response2
   until: key_response2.rc == 0
-- name: Echo the curl request
-  debug:
-    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys' -o '{{ netmaker_enrollment_key_list_file_location }}'"
-
 
 - name: Echo the content
   ansible.builtin.debug:
@@ -129,20 +124,19 @@
 
 - name: Write content to file (handle empty response)
   ansible.builtin.copy:
-    dest: /tmp/keylist.json
+    dest: "{{ netmaker_enrollment_key_list_file_location }}"
     content: "{{ key_response2.stdout | default('[]') }}"
   when:
     - key_response2.rc == 0
     - key_response2.stdout is defined
-    - (key_response2.stdout | length > 0)
-    - (key_response2.stdout | from_json is defined)
-    - (key_response2.stdout | from_json | length > 0)
-  #ignore_errors: true #remove this
+    - key_response2.stdout | length > 0
+    - key_response2.stdout | from_json is defined
+    - key_response2.stdout | from_json | length > 0
 - name: Write empty array to file
   ansible.builtin.copy:
-    dest: /tmp/keylist.json
+    dest: "{{ netmaker_enrollment_key_list_file_location }}"
     content: "[]"
   when:
     - key_response2.rc == 0
     - key_response2.stdout is defined
-    - (key_response2.stdout | length == 0 or key_response2.stdout == "[]")
+    - key_response2.stdout | length == 0 or key_response2.stdout == "[]"

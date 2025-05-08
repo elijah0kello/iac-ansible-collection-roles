@@ -52,15 +52,15 @@
   with_items: "{{ netmaker_networks }}"    
 
 - name: Create new networks in netmaker
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createnetwork.json.j2') }}"
-    body_format: json
-    status_code: [200]
+  command: >
+    wget --method=POST
+    --header='Content-Type: application/json'
+    --header='Authorization: Bearer {{ netmaker_master_key }}'
+    --body-string="{{ lookup('template', 'createnetwork.json.j2') }}"
+    --output-document=-
+    "https://api.{{ netmaker_base_domain }}/api/networks"
+  register: create_network_output
+  until: create_network_output.status_code == 200
   loop: "{{ new_netmaker_networks }}"
 
 - name: Get keys

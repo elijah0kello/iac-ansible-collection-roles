@@ -64,10 +64,12 @@
 
 - name: Debug network creation
   ansible.builtin.debug:
-    msg: "Created network '{{ item.network_name }}' with response: {{ create_network_output.results[loop.index0].stdout }}"
+    msg: "Created network '{{ item.network_name }}' with response: {{ create_network_output.results[index].stdout }}"
   loop: "{{ new_netmaker_networks }}"
+  loop_control:
+    index_var: index
   when: create_network_output.results is defined
-
+  
 - name: Get existing enrollment keys
   ansible.builtin.command: >
     curl -s -X GET

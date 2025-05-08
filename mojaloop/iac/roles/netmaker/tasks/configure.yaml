@@ -3,44 +3,42 @@
     curl -s -w "%{http_code} - Netmaker API is up" -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/networks
   register: _result
-  # echo the curl request and the response
-- debug:
-    msg: "Request: curl -s -w '%{http_code} - Netmaker API is up' -H 'Authorization: Bearer {{ netmaker_master_key }}' https://api.{{ netmaker_base_domain }}/api/networks.  Response: {{ _result.stdout }}"
   until: _result.stdout is defined and (_result.stdout | regex_search('200') or _result.stdout | regex_search('up'))
   retries: 3
   delay: 10
-  
+- debug:
+    msg: "Request: curl -s -w '%{http_code} - Netmaker API is up' -H 'Authorization: Bearer {{ netmaker_master_key }}' https://api.{{ netmaker_base_domain }}/api/networks.  Response: {{ _result.stdout }}"
 
-# - name: Render createadminuser.jso Add admin user using curl to /tmp
-#   template:
-#     src: createadminuser.json.j2
-#     dest: /tmp/createadminuser.json
+# - name: Render createadminuser.json Add admin user using curl to /tmp
+#  template:
+#    src: createadminuser.json.j2
+#    dest: /tmp/createadminuser.json
 
 # - name: Check if createadminuser.json exists
-#   stat:
-#     path: /tmp/createadminuser.json
-#   register: file_info
+#  stat:
+#    path: /tmp/createadminuser.json
+#  register: file_info
 
 # - name: Debug file info
-#   debug:
-#     var: file_info
+#  debug:
+#    var: file_info
 
 # - name: Add admin user using curl
-#   command: >
-#     curl -s -w "%{http_code}"
-#     -X POST
-#     -H "Content-Type: application/json"
-#     -H "Authorization: Bearer {{ netmaker_master_key }}"
-#     # red direct from json.j2
-#     -d @../templates/createadminuser.json.j2
-#     https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
-#   register: _result
-#   # echo the curl request and the response
+#  command: >
+#    curl -s -w "%{http_code}"
+#    -X POST
+#    -H "Content-Type: application/json"
+#    -H "Authorization: Bearer {{ netmaker_master_key }}"
+#    # red direct from json.j2
+#    -d @../templates/createadminuser.json.j2
+#    https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
+#  register: _result
+#  # echo the curl request and the response
 # - debug:
-#     msg: "Request: curl -s -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d @/tmp/createadminuser.json https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
+#    msg: "Request: curl -s -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d @/tmp/createadminuser.json https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
 # - debug:
-#     msg: "Response: {{ _result.stdout }}"
-#   failed_when: _result.stdout not in ["200", "400", "500"]
+#    msg: "Response: {{ _result.stdout }}"
+#  failed_when: _result.stdout not in ["200", "400", "500"]
 
 
 - name: Get all existing networks
@@ -50,16 +48,15 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/networks"
   register: existing_netmaker_networks
-  # echo the curl request
-  debug:
-    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/networks' Response: {{ existing_netmaker_networks.stdout }}"
   retries: 3  # Add retries
   delay: 5    # Add a delay between retries
   until: existing_netmaker_networks.rc == 0
+- debug:
+    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/networks' Response: {{ existing_netmaker_networks.stdout }}"
 
 - debug:
     var: existing_netmaker_networks
-    
+
 - name: Check if the request was successful
   fail:
     msg: "Failed to retrieve networks from Netmaker API.  Check the API availability, credentials, and domain."
@@ -79,14 +76,10 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     -d "{{ lookup('template', 'createnetwork.json.j2') }}"
     "https://api.{{ netmaker_base_domain }}/api/networks"
-  # echo the curl request
-- debug:
-    msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createnetwork.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/networks'"
   register: create_network_output
   until: create_network_output.rc == 0
   loop: "{{ new_netmaker_networks }}"
-  with_items: "{{ new_netmaker_networks }}" # Corrected line
-
+  with_items: "{{ new_netmaker_networks }}"
 
 - name: Get keys
   command: >
@@ -94,11 +87,10 @@
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
-  # echo the curl request
-- debug:
-    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys'"
   register: key_response
   until: key_response.rc == 0
+- debug:
+    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys'"
 
 - name: Add key for control network for netclient
   command: >
@@ -107,15 +99,14 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     -d "{{ lookup('template', 'createkey.json.j2') }}"
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
-  # echo the curl request
-- debug:
-    msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createkey.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys'"
   register: add_key_response
   until: "add_key_response.rc == 0 or ('400' in add_key_response.stdout and 'already exists' in add_key_response.stdout)"
   vars:
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
   when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', [keytag]) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
+- debug:
+    msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createkey.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys'"
 
 - name: Create directory for enrollment key list file
   ansible.builtin.file:
@@ -130,11 +121,10 @@
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
     -o "{{ netmaker_enrollment_key_list_file_location }}"
-  # echo the curl request
-- debug:
-    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys' -o '{{ netmaker_enrollment_key_list_file_location }}'"
   register: key_response2
   until: key_response2.rc == 0
+- debug:
+    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys' -o '{{ netmaker_enrollment_key_list_file_location }}'"
 
 - name: Echo the content
   ansible.builtin.debug:

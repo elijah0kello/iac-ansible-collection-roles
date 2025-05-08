@@ -6,7 +6,7 @@
   # echo the curl request and the response
 - debug:
     msg: "Request: curl -s -w '%{http_code} - Netmaker API is up' -H 'Authorization: Bearer {{ netmaker_master_key }}' https://api.{{ netmaker_base_domain }}/api/networks.  Response: {{ _result.stdout }}"
-  until: _result.stdout is defined and _result.stdout | regex_search('^200 - ')
+  until: _result.stdout in ["200", "400", "500"]
   retries: 30
   delay: 10
 

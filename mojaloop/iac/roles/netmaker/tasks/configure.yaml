@@ -69,7 +69,7 @@
   loop_control:
     index_var: index
   when: create_network_output.results is defined
-  
+
 - name: Get existing enrollment keys
   ansible.builtin.command: >
     curl -s -X GET
@@ -101,6 +101,14 @@
   ignore_errors: true
   changed_when: false
 
+- name: Debug enrollment key creation
+  ansible.builtin.debug:
+    msg: "Created enrollment key for network '{{ item.0.network_name }}' with response: {{ add_key_response.results[index].stdout }}"
+  loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
+  loop_control:
+    index_var: index
+  when: add_key_response.results is defined
+
 - name: Ensure directory exists for enrollment keys
   ansible.builtin.file:
     path: "{{ netmaker_enrollment_key_list_file_location | dirname }}"
@@ -118,6 +126,11 @@
   retries: 3
   delay: 5
   ignore_errors: true
+
+- name: Debug enrollment keys response
+  ansible.builtin.debug:
+    msg: "Enrollment keys response: {{ key_response2.stdout }}"
+  when: key_response2.stdout is defined
 
 - name: Save enrollment keys to file
   ansible.builtin.copy:

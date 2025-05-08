@@ -1,17 +1,20 @@
+---
 - name: Wait for Netmaker API server to respond using curl
-  command: >
+  ansible.builtin.command: >
     curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/networks
   register: _result
   until: _result.stdout == "200"
   retries: 3
   delay: 10
+  ignore_errors: true
 
-- debug:
+- name: Debug API response
+  ansible.builtin.debug:
     msg: "Response: {{ _result.stdout }} from Netmaker API"
 
 - name: Get all existing networks
-  command: >
+  ansible.builtin.command: >
     curl -s -X GET
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
@@ -20,48 +23,69 @@
   until: existing_netmaker_networks.rc == 0
   retries: 3
   delay: 5
+  ignore_errors: true
 
-- debug:
+- name: Debug network response
+  ansible.builtin.debug:
     msg: "Response: {{ existing_netmaker_networks.stdout }}"
 
 - name: Fail if network fetch fails
-  fail:
+  ansible.builtin.fail:
     msg: "Failed to retrieve networks from Netmaker API."
   when: existing_netmaker_networks.rc != 0
 
+- name: Parse existing networks
+  ansible.builtin.set_fact:
+    existing_networks: "{{ existing_netmaker_networks.stdout | from_json }}"
+  when: 
+    - existing_netmaker_networks.stdout is defined
+    - existing_netmaker_networks.stdout | length > 0
+
 - name: Compose new network list
-  set_fact:
-    new_netmaker_networks: "{{ (new_netmaker_networks | default([])) + [ { 'network_name': item.network_name, 'node_keys': item.node_keys, 'network_cidr': item.network_cidr } ] }}"
+  ansible.builtin.set_fact:
+    new_netmaker_networks: "{{ (new_netmaker_networks | default([])) + [item] }}"
   when: >
-    (existing_netmaker_networks.stdout | from_json) | selectattr('netid', 'equalto', item.network_name) | list | length == 0
+    (existing_networks is defined and existing_networks | selectattr('netid', 'equalto', item.network_name) | list | length == 0) or
+    not existing_networks is defined
   loop: "{{ netmaker_networks }}"
 
 - name: Create new networks in netmaker
-  command: >
+  ansible.builtin.command: >
     curl -X POST
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    -d "{{ lookup('template', 'createnetwork.json.j2') }}"
+    -d '{{ item | to_json }}'
     "https://api.{{ netmaker_base_domain }}/api/networks"
   register: create_network_output
   until: create_network_output.rc == 0
   loop: "{{ new_netmaker_networks }}"
-  loop_control:
-    loop_var: item
+  ignore_errors: true
+  changed_when: false
 
-- name: Debug response from network creation
-  debug:
-    msg: "curl response for network '{{ item.network_name }}': {{ create_network_output.results[loop.index0].stdout }}"
+- name: Debug network creation
+  ansible.builtin.debug:
+    msg: "Created network '{{ item.network_name }}' with response: {{ create_network_output.results[loop.index0].stdout }}"
   loop: "{{ new_netmaker_networks }}"
-  loop_control:
-    loop_var: item
+  when: create_network_output.results is defined
 
-- name: Add key for control network for netclient
-  command: >
+- name: Get existing enrollment keys
+  ansible.builtin.command: >
+    curl -s -X GET
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
+  register: key_response
+  until: key_response.rc == 0
+  retries: 3
+  delay: 5
+  ignore_errors: true
+
+- name: Add enrollment keys for networks
+  ansible.builtin.command: >
     curl -s -X POST
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    -d '{{ lookup("template", "createkey.json.j2") }}'
+    -d '{{ {"netid": item.0.network_name, "tags": [keytag]} | to_json }}'
     "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   register: add_key_response
   until: add_key_response.rc == 0 or (add_key_response.stdout is defined and 'already exists' in add_key_response.stdout)
@@ -72,17 +96,17 @@
   when: >
     (key_response.stdout | from_json) | selectattr('tags', 'equalto', [keytag]) | list | length == 0
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-  loop_control:
-    label: "{{ keytag }}"
+  ignore_errors: true
+  changed_when: false
 
-- name: Ensure directory exists for enrollment keys file
+- name: Ensure directory exists for enrollment keys
   ansible.builtin.file:
     path: "{{ netmaker_enrollment_key_list_file_location | dirname }}"
     state: directory
     mode: '0755'
 
-- name: Get keys again and save to file
-  command: >
+- name: Refresh enrollment keys list
+  ansible.builtin.command: >
     curl -s -X GET
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
@@ -91,21 +115,9 @@
   until: key_response2.rc == 0
   retries: 3
   delay: 5
+  ignore_errors: true
 
-- name: Write content to enrollment key file (handle non-empty)
-  copy:
+- name: Save enrollment keys to file
+  ansible.builtin.copy:
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
-    content: "{{ key_response2.stdout }}"
-  when:
-    - key_response2.stdout is defined
-    - key_response2.stdout | length > 0
-    - key_response2.stdout | from_json | length > 0
-
-- name: Write empty array to file if response is empty
-  copy:
-    dest: "{{ netmaker_enrollment_key_list_file_location }}"
-    content: "[]"
-  when:
-    - key_response2.stdout is not defined or
-      key_response2.stdout | length == 0 or
-      key_response2.stdout == "[]"
+    content: "{{ key_response2.stdout if (key_response2.stdout | length > 0) else '[]' }}"

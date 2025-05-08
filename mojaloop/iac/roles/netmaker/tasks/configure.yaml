@@ -49,11 +49,19 @@
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
     "https://api.{{ netmaker_base_domain }}/api/networks"
-  # echo the curl request
-- debug:
-    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/networks'"
   register: existing_netmaker_networks
+  retries: 3  # Add retries
+  delay: 5    # Add a delay between retries
   until: existing_netmaker_networks.rc == 0
+
+- debug:
+    var: existing_netmaker_networks
+    
+- name: Check if the request was successful
+  fail:
+    msg: "Failed to retrieve networks from Netmaker API.  Check the API availability, credentials, and domain."
+  when: existing_netmaker_networks.rc != 0
+
 
 - name: Compose the new network list
   set_fact:

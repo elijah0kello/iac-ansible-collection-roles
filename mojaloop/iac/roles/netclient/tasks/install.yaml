@@ -24,12 +24,12 @@
       - netclient={{ netmaker_image_version }}-0
     state: present
 
-- name: Read enrollment key list file
-  slurp:  # Use slurp to read the whole file
+- name: Read enrollment key list file content from {{ netmaker_enrollment_key_list_file_location }}
+  ansible.builtin.slurp:  # Use slurp to read the whole file
     src: "{{ netmaker_enrollment_key_list_file_location }}"
   register: enrollment_key_file_content
 
-- name: set token from local file
+- name: set token from local file 
   vars:
     query: "[?tags[0]=='{{ item }}'].token"
   set_fact:

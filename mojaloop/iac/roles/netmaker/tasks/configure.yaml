@@ -1,12 +1,12 @@
 - name: Wait for Netmaker API server to respond using curl
   command: >
-    curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer {{ netmaker_master_key }}"
+    curl -s -w "%{http_code} - Netmaker API is up" -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/networks
   register: _result
-  # echo the curl request
+  # echo the curl request and the response
 - debug:
-    msg: "curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer {{ netmaker_master_key }}' https://api.{{ netmaker_base_domain }}/api/networks"
-  until: _result.stdout == "200"
+    msg: "Request: curl -s -w '%{http_code} - Netmaker API is up' -H 'Authorization: Bearer {{ netmaker_master_key }}' https://api.{{ netmaker_base_domain }}/api/networks.  Response: {{ _result.stdout }}"
+  until: _result.stdout | regex_search('^200 - ')
   retries: 30
   delay: 10
 
@@ -26,17 +26,20 @@
 
 - name: Add admin user using curl
   command: >
-    curl -s -o /dev/null -w "%{http_code}"
+    curl -s -w "%{http_code}"
     -X POST
     -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
     -d @/tmp/createadminuser.json
     https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
-  # echo the curl request
-- debug:
-    msg: "curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d @/tmp/createadminuser.json https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
   register: _result
+  # echo the curl request and the response
+- debug:
+    msg: "Request: curl -s -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d @/tmp/createadminuser.json https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}"
+- debug:
+    msg: "Response: {{ _result.stdout }}"
   failed_when: _result.stdout not in ["200", "400", "500"]
+
 
 - name: Get all existing networks
   command: >

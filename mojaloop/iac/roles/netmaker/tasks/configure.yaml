@@ -53,14 +53,13 @@
 
 - name: Create new networks in netmaker
   command: >
-    wget --method=POST
-    --header='Content-Type: application/json'
-    --header='Authorization: Bearer {{ netmaker_master_key }}'
-    --body-string="{{ lookup('template', 'createnetwork.json.j2') }}"
-    --output-document=-
+    curl -X POST
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    -d "{{ lookup('template', 'createnetwork.json.j2') }}"
     "https://api.{{ netmaker_base_domain }}/api/networks"
   register: create_network_output
-  until: create_network_output.status_code == 200
+  until: create_network_output.rc == 0
   loop: "{{ new_netmaker_networks }}"
 
 - name: Get keys

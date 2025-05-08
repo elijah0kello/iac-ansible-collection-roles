@@ -1,14 +1,18 @@
 - name: Install netclient gpgkey
-  get_url:
-    url: https://apt.netmaker.org/gpg.key
-    dest: /etc/apt/trusted.gpg.d/netclient.asc
-    mode: 0777
+  command: >
+    wget
+    -O /etc/apt/trusted.gpg.d/netclient.asc
+    https://apt.netmaker.org/gpg.key
+  args:
+    creates: /etc/apt/trusted.gpg.d/netclient.asc
 
 - name: Install netclient package repo
-  get_url:
-    url: https://apt.netmaker.org/debian.deb.txt
-    dest: /etc/apt/sources.list.d/netclient.list
-    mode: 0777
+  command: >
+    wget
+    -O /etc/apt/sources.list.d/netclient.list
+    https://apt.netmaker.org/debian.deb.txt
+  args:
+    creates: /etc/apt/sources.list.d/netclient.list\
 
 - name: Update apt cache
   shell: apt update

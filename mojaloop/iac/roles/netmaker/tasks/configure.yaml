@@ -31,19 +31,15 @@
     https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
   register: _result
   failed_when: _result.stdout not in ["200", "400", "500"]
-
-- name: Get all existing networks 
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
-  register: existing_netmaker_networks  
-
+  
+- name: Get all existing networks
+  command: >
+    curl -X GET
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    "https://api.{{ netmaker_base_domain }}/api/networks"
+  register: existing_netmaker_networks
+  until: existing_netmaker_networks.rc == 0
 
 - name: Compose the new network list
   set_fact:

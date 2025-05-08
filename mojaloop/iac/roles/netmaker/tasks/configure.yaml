@@ -31,7 +31,7 @@
     https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
   register: _result
   failed_when: _result.stdout not in ["200", "400", "500"]
-  
+
 - name: Get all existing networks
   command: >
     curl -X GET
@@ -93,7 +93,7 @@
 
 - name: copy keys
   copy: 
-    content: "{{ key_response2.content }}"
+    content: "{{ key_response2.stdout }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
 

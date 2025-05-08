@@ -38,32 +38,23 @@
 
 - name: Create new networks in netmaker
   command: >
-    curl -s -X POST
+    curl -X POST
     -H 'Content-Type: application/json'
     -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    -d '{{ lookup("template", "createnetwork.json.j2") }}'
+    -d "{{ lookup('template', 'createnetwork.json.j2') }}"
     "https://api.{{ netmaker_base_domain }}/api/networks"
   register: create_network_output
   until: create_network_output.rc == 0
-  retries: 3
-  delay: 5
   loop: "{{ new_netmaker_networks }}"
   loop_control:
-    label: "{{ item.network_name }}"
+    loop_var: item
 
-- debug:
-    msg: "Network creation response for {{ item.network_name }}: {{ create_network_output.stdout }}"
-
-- name: Get keys
-  command: >
-    curl -s -X GET
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
-  register: key_response
-  until: key_response.rc == 0
-  retries: 3
-  delay: 5
+- name: Debug response from network creation
+  debug:
+    msg: "curl response for network '{{ item.network_name }}': {{ create_network_output.results[loop.index0].stdout }}"
+  loop: "{{ new_netmaker_networks }}"
+  loop_control:
+    loop_var: item
 
 - name: Add key for control network for netclient
   command: >

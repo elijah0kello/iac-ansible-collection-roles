@@ -81,7 +81,7 @@
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
   when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', [keytag]) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-  
+
 - name: Create directory for enrollment key list file
   ansible.builtin.file:
     path: "{{ netmaker_enrollment_key_list_file_location | dirname }}"
@@ -97,6 +97,10 @@
     -o "{{ netmaker_enrollment_key_list_file_location }}"
   register: key_response2
   until: key_response2.rc == 0
+- name: Echo the curl request
+  debug:
+    msg: "curl -X GET -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' 'https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys' -o '{{ netmaker_enrollment_key_list_file_location }}'"
+
 
 - name: Echo the content
   ansible.builtin.debug:

@@ -63,16 +63,13 @@
   loop: "{{ new_netmaker_networks }}"
 
 - name: Get keys
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
+  command: >
+    curl -X GET
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   register: key_response
+  until: key_response.rc == 0
 
 - name: Add key for control network for netclient
   uri:

@@ -81,33 +81,7 @@
   retries: 3
   delay: 5
   ignore_errors: true
-
-- name: Add enrollment keys for networks
-  ansible.builtin.command: >
-    curl -s -X POST
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    -d '{{ {"netid": item.0.network_name, "tags": [keytag]} | to_json }}'
-    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
-  register: add_key_response
-  until: add_key_response.rc == 0 or (add_key_response.stdout is defined and 'already exists' in add_key_response.stdout)
-  retries: 3
-  delay: 5
-  vars:
-    keytag: "{{ item.0.network_name }}-{{ item.1 }}"
-  when: >
-    (key_response.stdout | from_json) | selectattr('tags', 'equalto', [keytag]) | list | length == 0
-  loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-  ignore_errors: true
-  changed_when: false
-
-- name: Debug enrollment key creation
-  ansible.builtin.debug:
-    msg: "Created enrollment key for network '{{ item.0.network_name }}' with response: {{ add_key_response.results[index].stdout }}"
-  loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-  loop_control:
-    index_var: index
-  when: add_key_response.results is defined
+ 
 
 - name: Ensure directory exists for enrollment keys
   ansible.builtin.file:

@@ -18,12 +18,15 @@
         {% set network_match = line | regex_search(r'Network:\s+(\S+)') %}
         {% set node_id_match = line | regex_search(r'Node ID:\s+(\S+)') %}
         {% if network_match and node_id_match %}
-          {% set network = network_match[1] %}
-          {% set node_id = node_id_match[1] %}
+          {% set network = network_match.1 | trim %}
+          {% set node_id = node_id_match.1 | trim %}
           {% set items = items + [{'network': network, 'node_id': node_id}] %}
         {% endif %}
       {% endfor %}
       {{ items }}
+  vars:
+    regex_network: r'Network:\s+(\S+)'
+    regex_node_id: r'Node ID:\s+(\S+)'
 
 - name: Debug parsed egress_gw_items
   ansible.builtin.debug:
@@ -40,7 +43,7 @@
   until: create_gw_output.rc == 0 or (create_gw_output.rc == 7 and 'already a gateway' in create_gw_output.stderr) # Adjust rc for "already a gateway" if needed
   retries: 3
   delay: 5
-  loop: "{{ egress_gw_items }}"
+  loop: "{{ egress_gw_items | default([]) }}"
   when: egress_gw_items | length > 0
   changed_when: create_gw_output.rc == 0
   failed_when: create_gw_output.rc != 0 and 'already a gateway' not in create_gw_output.stderr
@@ -48,5 +51,5 @@
 - name: Debug egress gw creation response
   ansible.builtin.debug:
     msg: "Egress GW creation response for {{ item.network }}/{{ item.node_id }}: {{ create_gw_output.stdout | default(create_gw_output.stderr) }}"
-  loop: "{{ egress_gw_items }}"
+  loop: "{{ egress_gw_items | default([]) }}"
   when: egress_gw_items | length > 0

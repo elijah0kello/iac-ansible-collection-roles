@@ -12,6 +12,15 @@
     src: ../templates/createadminuser.json.j2
     dest: /tmp/createadminuser.json'
 
+- name: Check if createadminuser.json exists
+  stat:
+    path: /tmp/createadminuser.json
+  register: file_info
+
+- name: Debug file info
+  debug:
+    var: file_info
+
 - name: Add admin user using curl
   command: >
     curl -s -o /dev/null -w "%{http_code}"

@@ -82,6 +82,12 @@
   when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', [keytag]) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
 
+- name: Create directory for enrollment key list file
+  ansible.builtin.file:
+    path: "{{ netmaker_enrollment_key_list_file_location | dirname }}"
+    state: directory
+    mode: '0755'  # Ensure the directory has appropriate permissions
+
 - name: Get keys again and save to file
   command: >
     curl -X GET
@@ -91,6 +97,7 @@
     -o "{{ netmaker_enrollment_key_list_file_location }}"
   register: key_response2
   until: key_response2.rc == 0
+
 
 
 # - name: Copy keys to a local file at {{ netmaker_enrollment_key_list_file_location }}

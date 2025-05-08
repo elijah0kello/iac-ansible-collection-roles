@@ -2,14 +2,22 @@
   shell: "netclient list"
   register: _result
 ##get networks from netclient command line netclient list, loop over networks with nodeid
-- name: Add egress gw
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}/creategateway
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'creategw.json.j2') }}"
-    body_format: json
-    status_code: [200, 400]
-  loop: "{{ _result.stdout }}"
+- name: Add egress gw using curl
+  ansible.builtin.command: >
+    curl -X POST
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    -d "@{{ playbook_dir }}/creategw.json.j2"
+    "https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}/creategateway"
+  register: create_gw_output
+  until: create_gw_output.rc == 0 or (create_gw_output.rc == 7 and 'already a gateway' in create_gw_output.stderr) # rc 7 is usually "Couldn't connect to server" or similar, adjust as needed for 400 equivalent
+  retries: 3
+  delay: 5
+  loop: "{{ _result.stdout | from_json }}"
+  changed_when: create_gw_output.rc == 0
+  failed_when: create_gw_output.rc != 0 and 'already a gateway' not in create_gw_output.stderr
+
+- name: Debug egress gw creation
+  ansible.builtin.debug:
+    msg: "Egress GW creation response for {{ item.network }}/{{ item.node_id }}: {{ create_gw_output.stdout | default(create_gw_output.stderr) }}"
+  loop: "{{ _result.stdout | from_json }}"

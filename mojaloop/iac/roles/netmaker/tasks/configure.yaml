@@ -52,54 +52,47 @@
   with_items: "{{ netmaker_networks }}"    
 
 - name: Create new networks in netmaker
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createnetwork.json.j2') }}"
-    body_format: json
-    status_code: [200]
+  command: >
+    curl -X POST
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    -d "{{ lookup('template', 'createnetwork.json.j2') }}"
+    "https://api.{{ netmaker_base_domain }}/api/networks"
+  register: create_network_output
+  until: create_network_output.rc == 0
   loop: "{{ new_netmaker_networks }}"
 
 - name: Get keys
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
+  command: >
+    curl -X GET
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   register: key_response
+  until: key_response.rc == 0
 
 - name: Add key for control network for netclient
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createkey.json.j2') }}"
-    body_format: json
-    status_code: [200, 400]
+  command: >
+    curl -X POST
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    -d "{{ lookup('template', 'createkey.json.j2') }}"
+    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
+  register: add_key_response
+  until: add_key_response.rc == 0 or ('400' in add_key_response.stdout and 'already exists' in add_key_response.stdout)
   vars:
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
-  when: "( key_response.content  | from_json ) | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0"
+  when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', [keytag]) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
 
 - name: Get keys again
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
+  command: >
+    curl -X GET
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
   register: key_response2
+  until: key_response2.rc == 0
 
 - name: copy keys
   copy: 

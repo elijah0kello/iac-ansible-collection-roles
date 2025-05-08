@@ -72,20 +72,19 @@
   until: key_response.rc == 0
 
 - name: Add key for control network for netclient
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createkey.json.j2') }}"
-    body_format: json
-    status_code: [200, 400]
+  command: >
+    curl -X POST
+    -H 'Content-Type: application/json'
+    -H 'Authorization: Bearer {{ netmaker_master_key }}'
+    -d "{{ lookup('template', 'createkey.json.j2') }}"
+    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
+  register: add_key_response
+  until: add_key_response.rc == 0 or ('400' in add_key_response.stdout and 'already exists' in add_key_response.stdout)
   vars:
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
-  when: "( key_response.content  | from_json ) | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0"
+  when: "( key_response.stdout | from_json ) | selectattr('tags', 'equalto', [keytag]) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-
+  
 - name: Get keys again
   uri:
     url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys

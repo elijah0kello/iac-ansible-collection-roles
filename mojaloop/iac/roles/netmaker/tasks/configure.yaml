@@ -78,10 +78,10 @@
     "https://api.{{ netmaker_base_domain }}/api/networks"
   register: create_network_output
   until: create_network_output.rc == 0
-  with_items: "{{ new_netmaker_networks }}" # Fix: Removed the duplicate loop
+  with_items: "{{ new_netmaker_networks }}"
   
 - debug:
-    msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createnetwork.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/networks'"
+    msg: "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer {{ netmaker_master_key }}' -d '{{ lookup('template', 'createnetwork.json.j2') }}' 'https://api.{{ netmaker_base_domain }}/api/networks'  Response: {{ item }}" # Added item here
 
 - name: Get keys
   command: >

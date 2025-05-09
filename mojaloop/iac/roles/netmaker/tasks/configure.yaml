@@ -65,20 +65,23 @@
   changed_when: false
   failed_when: create_network_result.stdout[-3:] != "200"
 
-- name: Get keys via curl
+- name: Get keys via curl and store the response in a fact
   ansible.builtin.command: >
-    curl -s -w "%{http_code}" -o /tmp/key_response.json
-    -H "Content-Type: application/json"
+    curl -s -w "%{http_code}" -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: curl_response
   changed_when: false
   failed_when: curl_response.stdout[-3:] != "200"
 
-- name: Read and store keys from the response file
+- name: Set the response body as a fact
   set_fact:
-    key_response: "{{ lookup('file', '/tmp/key_response.json') | from_json }}"
+    key_response: "{{ curl_response.stdout[:-3] | from_json }}"
   when: curl_response.stdout[-3:] == "200"
+
+- name: Debug key response
+  debug:
+    msg: "{{ key_response }}"
 
 - name: Add key for control network for netclient
   uri:

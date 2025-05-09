@@ -94,7 +94,7 @@
     -X POST
     -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
-    -d '{{ lookup("template", "createkey.json.j2") }}'
+    -d '{{ lookup("template", "createkey.json.j2") | to_json  }}'
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: create_key_response
   when: key_response | length == 0

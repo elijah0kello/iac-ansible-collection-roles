@@ -59,7 +59,7 @@
   register: create_network_output
   until: create_network_output.rc == 0
   loop: "{{ new_netmaker_networks }}"
-  ignore_errors: true
+  ignore_errors: false
   changed_when: false
 
 - name: Debug network creation

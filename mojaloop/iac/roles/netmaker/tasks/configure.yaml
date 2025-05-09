@@ -81,7 +81,7 @@
 
 - name: Set the response body as a fact (strip status code and newline)
   set_fact:
-    key_response: "{{ curl_response.stdout[:-3] | from_json | default([]) }}"
+    key_response: "{{ (curl_response.stdout[:-3] | from_json) if (curl_response.stdout[:-3] | length) > 0 else [] }}"
   when: curl_response.stdout[-3:] == "200"
 
 - name: Debug key_response

@@ -81,7 +81,7 @@
 
 - name: Set the response body as a fact (strip status code and newline)
   set_fact:
-    key_response: "{{ curl_response.stdout.split('\n')[0] | from_json | default([]) }}"
+    key_response: "{{ curl_response.stdout[:-3] | from_json | default([]) }}"
   when: curl_response.stdout[-3:] == "200"
 
 - name: Debug key_response
@@ -97,14 +97,12 @@
     -d '{{ lookup("template", "createkey.json.j2") }}'
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: create_key_response
-  when: key_response | length == 0  # Check if key_response is empty (no keys present)
+  when: key_response | length == 0
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
   loop_control:
     loop_var: item
   changed_when: false
   failed_when: create_key_response.stdout[-3:] != "200"
-
-
 
 - name: Get keys again via curl and store the response in a fact
   ansible.builtin.command: >

@@ -22,18 +22,21 @@
   failed_when: curl_response.stdout not in ["200", "400", "500"]
 
 
-- name: Get all existing networks 
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
-  register: existing_netmaker_networks  
+- name: Get all existing networks via curl
+  ansible.builtin.command: >
+    curl -s -w "%{http_code}" -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    https://api.{{ netmaker_base_domain }}/api/networks
+  register: curl_response_raw
+  changed_when: false
+  failed_when: curl_response_raw.stdout[-3:] != "200"
 
+- name: Extract network list from curl response
+  set_fact:
+    existing_netmaker_networks: "{{ existing_netmaker_networks_data }}"
+  vars:
+    existing_netmaker_networks_data: >-
+      {{ curl_response_raw.stdout[:-3] | from_json }} 
 
 - name: Compose the new network list
   set_fact:

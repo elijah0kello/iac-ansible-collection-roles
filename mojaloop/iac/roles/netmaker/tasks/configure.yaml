@@ -1,144 +1,102 @@
----
-- name: Wait for Netmaker API server to respond using curl
-  ansible.builtin.command: >
-    curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer {{ netmaker_master_key }}"
-    https://api.{{ netmaker_base_domain }}/api/networks
+- name: Wait netmaker api server to respond
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/networks
+    method: GET
+    headers:
+      Authorization: Bearer {{ netmaker_master_key }}
   register: _result
-  until: _result.stdout == "200"
-  retries: 3
-  delay: 10
-  ignore_errors: true
+  until: _result.status == 200
+  retries: 30
+  delay: 10 # Every 10 seconds
 
-- name: Debug API response
-  ansible.builtin.debug:
-    msg: "Response: {{ _result.stdout }} from Netmaker API"
+- name: Add admin user
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer {{ netmaker_master_key }}
+    body: "{{ lookup('template', 'createadminuser.json.j2') }}"
+    body_format: json
+    status_code: [200, 400, 500]
 
-- name: Get all existing networks
-  ansible.builtin.command: >
-    curl -s -X GET
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    "https://api.{{ netmaker_base_domain }}/api/networks"
-  register: existing_netmaker_networks
-  until: existing_netmaker_networks.rc == 0
-  retries: 3
-  delay: 5
-  ignore_errors: true
+- name: Get all existing networks 
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/networks
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer {{ netmaker_master_key }}
+    status_code: [200]
+    return_content: true
+    body_format: json
+  register: existing_netmaker_networks  
 
-- name: Debug network response
-  ansible.builtin.debug:
-    msg: "Response: {{ existing_netmaker_networks.stdout }}"
 
-- name: Fail if network fetch fails
-  ansible.builtin.fail:
-    msg: "Failed to retrieve networks from Netmaker API."
-  when: existing_netmaker_networks.rc != 0
-
-- name: Parse existing networks
-  ansible.builtin.set_fact:
-    existing_networks: "{{ existing_netmaker_networks.stdout | from_json }}"
-  when: 
-    - existing_netmaker_networks.stdout is defined
-    - existing_netmaker_networks.stdout | length > 0
-
-- name: Compose new network list
-  ansible.builtin.set_fact:
-    new_netmaker_networks: "{{ (new_netmaker_networks | default([])) + [item] }}"
-  when: >
-    (existing_networks is defined and existing_networks | selectattr('netid', 'equalto', item.network_name) | list | length == 0) or
-    not existing_networks is defined
-  loop: "{{ netmaker_networks }}"
-
-- name: Show the network item being created
-  ansible.builtin.debug:
-    msg: "{{ item }}"
-  loop: "{{ new_netmaker_networks }}"
+- name: Compose the new network list
+  set_fact:
+    new_netmaker_networks: '{{ ( new_netmaker_networks | list ) + ( [ {"network_name": item.network_name, "node_keys": item.node_keys, "network_cidr": item.network_cidr }] | list )}}'
+  when: ( existing_netmaker_networks.content | from_json ) | selectattr('netid', 'equalto', item.network_name) | list | count == 0 
+  with_items: "{{ netmaker_networks }}"    
 
 - name: Create new networks in netmaker
-  ansible.builtin.command: >
-    curl -X POST
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    -d '{{ item | to_json }}'
-    "https://api.{{ netmaker_base_domain }}/api/networks"
-  register: create_network_output
-  until: create_network_output.rc == 0
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/networks
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer {{ netmaker_master_key }}
+    body: "{{ lookup('template', 'createnetwork.json.j2') }}"
+    body_format: json
+    status_code: [200]
   loop: "{{ new_netmaker_networks }}"
-  ignore_errors: false
-  changed_when: false
 
-
-- name: Debug network creation
-  ansible.builtin.debug:
-    msg: "Created network '{{ item.network_name }}' with response: {{ create_network_output.results[index].stdout }}"
-  loop: "{{ new_netmaker_networks }}"
-  loop_control:
-    index_var: index
-  when: create_network_output.results is defined
-
-- name: Get existing enrollment keys
-  ansible.builtin.command: >
-    curl -s -X GET
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
+- name: Get keys
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer {{ netmaker_master_key }}
+    status_code: [200]
+    return_content: true
+    body_format: json
   register: key_response
-  until: key_response.rc == 0
-  retries: 3
-  delay: 5
-  ignore_errors: true
 
-- name: Add enrollment keys for networks
-  ansible.builtin.command: >
-    curl -s -X POST
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    -d '{{ {"netid": item.0.network_name, "tags": [keytag]} | to_json }}'
-    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
-  register: add_key_response
-  until: add_key_response.rc == 0 or (add_key_response.stdout is defined and 'already exists' in add_key_response.stdout)
-  retries: 3
-  delay: 5
+- name: Add key for control network for netclient
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer {{ netmaker_master_key }}
+    body: "{{ lookup('template', 'createkey.json.j2') }}"
+    body_format: json
+    status_code: [200, 400]
   vars:
     keytag: "{{ item.0.network_name }}-{{ item.1 }}"
-  when: >
-    (key_response.stdout | from_json) | selectattr('tags', 'equalto', [keytag]) | list | length == 0
+  when: "( key_response.content  | from_json ) | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-  ignore_errors: true
-  changed_when: false
 
-- name: Debug enrollment key creation
-  ansible.builtin.debug:
-    msg: "Created enrollment key for network '{{ item.0.network_name }}' with response: {{ add_key_response.results[index].stdout }}"
-  loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
-  loop_control:
-    index_var: index
-  when: add_key_response.results is defined
-
-- name: Ensure directory exists for enrollment keys
-  ansible.builtin.file:
-    path: "{{ netmaker_enrollment_key_list_file_location | dirname }}"
-    state: directory
-    mode: '0755'
-
-- name: Refresh enrollment keys list
-  ansible.builtin.command: >
-    curl -s -X GET
-    -H 'Content-Type: application/json'
-    -H 'Authorization: Bearer {{ netmaker_master_key }}'
-    "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys"
+- name: Get keys again
+  uri:
+    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: Bearer {{ netmaker_master_key }}
+    status_code: [200]
+    return_content: true
   register: key_response2
-  until: key_response2.rc == 0
-  retries: 3
-  delay: 5
-  ignore_errors: true
 
-- name: Debug enrollment keys response
-  ansible.builtin.debug:
-    msg: "Enrollment keys response: {{ key_response2.stdout }}"
-  when: key_response2.stdout is defined
-
-- name: Save enrollment keys to file
-  ansible.builtin.copy:
+- name: copy keys
+  copy: 
+    content: "{{ key_response2.content }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
-    content: "{{ key_response2.stdout if (key_response2.stdout | length > 0) else '[]' }}"
+  delegate_to: localhost
+
+# - name: Save access token for bastion netclient
+#   vars:
+#     query: "[?tags[0]=='{{ netmaker_control_network_name }}-access'].token"
+#   set_fact:
+#     netmaker_control_network_access_string: "{{ key_response2.json | json_query(query) | first }}"

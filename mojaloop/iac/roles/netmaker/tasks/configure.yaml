@@ -67,14 +67,15 @@
 
 - name: Get keys via curl and store the response in a fact
   ansible.builtin.command: >
-    curl -s -w "%{http_code}" -H "Content-Type: application/json"
+    curl -s -w "%{http_code}" -o /tmp/key_response.json
+    -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: curl_response
   changed_when: false
   failed_when: curl_response.stdout[-3:] != "200"
 
-- name: Debug full curl response
+- name: Debug full curl response for keys
   debug:
     msg: "{{ curl_response.stdout }}"
 
@@ -83,45 +84,44 @@
     key_response: "{{ curl_response.stdout.split('\n')[0] | from_json }}"
   when: curl_response.stdout[-3:] == "200"
 
-- name: Handle empty key response
-  debug:
-    msg: "No enrollment keys found."
-  when: key_response | length == 0
-
-- name: Debug the key response
-  debug:
-    msg: "{{ key_response }}"
-  when: key_response | length > 0
-
-- name: Add key for control network for netclient
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createkey.json.j2') }}"
-    body_format: json
-    status_code: [200, 400]
-  vars:
-    keytag: "{{ item.0.network_name }}-{{ item.1 }}"
-  when: "( key_response.content  | from_json ) | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0"
+- name: Add key for control network for netclient via curl
+  ansible.builtin.command: >
+    curl -s -w "%{http_code}" -o /tmp/create_key_response.json
+    -X POST
+    -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    -d '{{ lookup("template", "createkey.json.j2") }}'
+    https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
+  register: create_key_response
+  when: "( key_response | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0 )"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
+  loop_control:
+    loop_var: item
+  changed_when: false
+  failed_when: create_key_response.stdout[-3:] != "200"
 
-- name: Get keys again
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-  register: key_response2
+- name: Get keys again via curl and store the response in a fact
+  ansible.builtin.command: >
+    curl -s -w "%{http_code}" -o /tmp/key_response2.json
+    -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
+  register: curl_response2
+  changed_when: false
+  failed_when: curl_response2.stdout[-3:] != "200"
 
-- name: copy keys
-  copy: 
-    content: "{{ key_response2.content }}"
+- name: Debug full curl response for second key retrieval
+  debug:
+    msg: "{{ curl_response2.stdout }}"
+
+- name: Set the response body as a fact (strip status code and newline) for second call
+  set_fact:
+    key_response2: "{{ curl_response2.stdout.split('\n')[0] | from_json }}"
+  when: curl_response2.stdout[-3:] == "200"
+
+- name: Copy keys to the local machine
+  copy:
+    content: "{{ key_response2 }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
 

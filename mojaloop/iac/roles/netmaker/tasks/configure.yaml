@@ -81,13 +81,13 @@
 
 - name: Set the response body as a fact (strip status code and newline)
   set_fact:
-    key_response: "{{ curl_response.stdout.split('\n')[0] | from_json }}"
+    key_response: "{{ curl_response.stdout.split('\n')[0] | from_json | default([]) }}"
   when: curl_response.stdout[-3:] == "200"
 
 - name: Debug key_response
   debug:
     var: key_response
-    
+
 - name: Add key for control network for netclient via curl
   ansible.builtin.command: >
     curl -s -w "%{http_code}" -o /tmp/create_key_response.json
@@ -97,14 +97,13 @@
     -d '{{ lookup("template", "createkey.json.j2") }}'
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: create_key_response
-  when: >
-    ( key_response | default([]) | from_json ) | length == 0 or
-    ( key_response | from_json | selectattr('tags', 'equalto', ( item.0.network_name + '-' + item.1 )) | list | count == 0 )
+  when: key_response | length == 0  # Check if key_response is empty (no keys present)
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
   loop_control:
     loop_var: item
   changed_when: false
   failed_when: create_key_response.stdout[-3:] != "200"
+
 
 
 - name: Get keys again via curl and store the response in a fact

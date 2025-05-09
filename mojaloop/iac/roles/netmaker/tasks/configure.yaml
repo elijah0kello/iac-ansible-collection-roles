@@ -90,11 +90,11 @@
 
 - name: Add key for control network for netclient via curl
   ansible.builtin.command: >
-    curl -s -w "%{http_code}" -o /tmp/create_key_response.json
+    curl -s -w "%{http_code}"
     -X POST
     -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
-    -d '{{ lookup("template", "createkey.json.j2") | to_json  }}'
+    -d '{{ lookup("template", "createkey.json.j2") | to_json }}'
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: create_key_response
   when: key_response | length == 0
@@ -104,9 +104,9 @@
   changed_when: false
   failed_when: create_key_response.stdout[-3:] != "200"
 
-- name: Get keys again via curl and store the response in a fact
+- name: Get keys again via curl
   ansible.builtin.command: >
-    curl -s -w "%{http_code}" -o /tmp/key_response2.json
+    curl -s -w "%{http_code}"
     -H "Content-Type: application/json"
     -H "Authorization: Bearer {{ netmaker_master_key }}"
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
@@ -118,16 +118,19 @@
   debug:
     msg: "{{ curl_response2.stdout }}"
 
-- name: Set the response body as a fact (strip status code and newline) for second call
+- name: Set the response body as a fact (strip status code and newline)
   set_fact:
-    key_response2: "{{ curl_response2.stdout.split('\n')[0] | from_json }}"
+    key_response2: >-
+      {% set body = curl_response2.stdout[:-3] | trim %}
+      {% if body %}{{ body | from_json }}{% else %}[] {% endif %}
   when: curl_response2.stdout[-3:] == "200"
 
 - name: Copy keys to the local machine
   copy:
-    content: "{{ key_response2 }}"
+    content: "{{ key_response2 | to_nice_json }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
+
 
 # - name: Save access token for bastion netclient
 #   vars:

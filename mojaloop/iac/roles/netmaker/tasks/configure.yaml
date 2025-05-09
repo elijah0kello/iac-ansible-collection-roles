@@ -44,17 +44,20 @@
   when: ( existing_netmaker_networks.content | from_json ) | selectattr('netid', 'equalto', item.network_name) | list | count == 0 
   with_items: "{{ netmaker_networks }}"    
 
-- name: Create new networks in netmaker
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createnetwork.json.j2') }}"
-    body_format: json
-    status_code: [200]
+- name: Create new networks in Netmaker via curl
+  ansible.builtin.command: >
+    curl -s -w "%{http_code}" -o /tmp/create_network_response.txt
+    -X POST
+    -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    -d '{{ lookup("template", "createnetwork.json.j2") | to_json }}'
+    https://api.{{ netmaker_base_domain }}/api/networks
+  register: create_network_result
   loop: "{{ new_netmaker_networks }}"
+  loop_control:
+    loop_var: item
+  changed_when: false
+  failed_when: create_network_result.stdout[-3:] != "200"
 
 - name: Get keys
   uri:

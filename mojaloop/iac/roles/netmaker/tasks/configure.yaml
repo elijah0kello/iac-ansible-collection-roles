@@ -65,17 +65,20 @@
   changed_when: false
   failed_when: create_network_result.stdout[-3:] != "200"
 
-- name: Get keys
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200]
-    return_content: true
-    body_format: json
-  register: key_response
+- name: Get keys via curl
+  ansible.builtin.command: >
+    curl -s -w "%{http_code}" -o /tmp/key_response.json
+    -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
+  register: curl_response
+  changed_when: false
+  failed_when: curl_response.stdout[-3:] != "200"
+
+- name: Read and store keys from response
+  set_fact:
+    key_response: "{{ curl_response.stdout[:-3] | from_json }}"
+
 
 - name: Add key for control network for netclient
   uri:

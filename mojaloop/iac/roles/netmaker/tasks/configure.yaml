@@ -75,10 +75,14 @@
   changed_when: false
   failed_when: curl_response.stdout[-3:] != "200"
 
+- name: Debug curl response
+  debug:
+    msg: "Curl Response: {{ curl_response.stdout }}"
+
 - name: Read and store keys from response
   set_fact:
     key_response: "{{ curl_response.stdout[:-3] | from_json }}"
-
+  when: curl_response.stdout[-3:] == "200"
 
 - name: Add key for control network for netclient
   uri:

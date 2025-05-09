@@ -1,13 +1,13 @@
-- name: Wait netmaker api server to respond
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/networks
-    method: GET
-    headers:
-      Authorization: Bearer {{ netmaker_master_key }}
-  register: _result
-  until: _result.status == 200
-  retries: 30
-  delay: 10 # Every 10 seconds
+- name: Wait for Netmaker API server to respond
+  ansible.builtin.command: >
+    curl -s -o /dev/null -w "%{http_code}"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    https://api.{{ netmaker_base_domain }}/api/networks
+  register: curl_response
+  until: curl_response.stdout == "200"
+  retries: 5
+  delay: 5
+  changed_when: false
 
 - name: Add admin user
   uri:

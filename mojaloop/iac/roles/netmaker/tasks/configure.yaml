@@ -50,17 +50,18 @@
   loop: "{{ netmaker_networks }}"
 
 - name: Create new networks in netmaker
+  loop: "{{ new_netmaker_networks }}"
   block:
-    - name: Print curl request for debugging
+    - name: Print curl request for network '{{ item.network_name }}'
       ansible.builtin.debug:
         msg: |
           curl -X POST \
           -H 'Content-Type: application/json' \
           -H 'Authorization: Bearer {{ netmaker_master_key }}' \
-          -d '{{ item | to_json | replace("'", "'\\''") }}' \
+          -d '{{ item | to_json }}' \
           "https://api.{{ netmaker_base_domain }}/api/networks"
 
-    - name: Execute network creation
+    - name: Execute network creation for '{{ item.network_name }}'
       ansible.builtin.command: >
         curl -X POST
         -H 'Content-Type: application/json'
@@ -69,9 +70,8 @@
         "https://api.{{ netmaker_base_domain }}/api/networks"
       register: create_network_output
       until: create_network_output.rc == 0
-      loop: "{{ new_netmaker_networks }}"
-      ignore_errors: false
-      changed_when: false
+  ignore_errors: false
+  changed_when: false
 
 - name: Debug network creation
   ansible.builtin.debug:

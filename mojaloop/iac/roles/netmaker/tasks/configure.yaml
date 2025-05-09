@@ -77,15 +77,21 @@
 - name: Debug full curl response
   debug:
     msg: "{{ curl_response.stdout }}"
-    
-- name: Set the response body as a fact
+
+- name: Set the response body as a fact (strip status code and newline)
   set_fact:
-    key_response: "{{ curl_response.stdout[:-3] | from_json }}"
+    key_response: "{{ curl_response.stdout.split('\n')[0] | from_json }}"
   when: curl_response.stdout[-3:] == "200"
 
-- name: Debug key response
+- name: Handle empty key response
+  debug:
+    msg: "No enrollment keys found."
+  when: key_response | length == 0
+
+- name: Debug the key response
   debug:
     msg: "{{ key_response }}"
+  when: key_response | length > 0
 
 - name: Add key for control network for netclient
   uri:

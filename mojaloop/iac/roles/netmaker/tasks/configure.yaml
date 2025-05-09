@@ -50,14 +50,6 @@
   loop_control:
     loop_var: item
 
-- name: Compose the new network list
-  set_fact:
-    new_netmaker_networks: "{{ (new_netmaker_networks | default([])) + [ { 'network_name': item.network_name, 'node_keys': item.node_keys, 'network_cidr': item.network_cidr } ] }}"
-  when: existing_netmaker_networks | selectattr('netid', 'equalto', item.network_name) | list | count == 0
-  loop: "{{ netmaker_networks }}"
-  loop_control:
-    loop_var: item   
-
 - name: Create new networks in Netmaker via curl
   ansible.builtin.command: >
     curl -s -w "%{http_code}" -o /tmp/create_network_response.txt

@@ -93,7 +93,6 @@
     -d '{{ lookup("template", "createkey.json.j2") }}'
     https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys
   register: create_key_response
-  when: "( key_response | selectattr('tags', 'equalto', ( keytag | list )) | list | count == 0 ) or key_response | length == 0"
   loop: "{{ new_netmaker_networks | subelements('node_keys') }}"
   loop_control:
     loop_var: item

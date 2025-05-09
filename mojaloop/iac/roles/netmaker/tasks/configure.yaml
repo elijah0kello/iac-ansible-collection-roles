@@ -9,16 +9,18 @@
   delay: 5
   changed_when: false
 
-- name: Add admin user
-  uri:
-    url: https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'createadminuser.json.j2') }}"
-    body_format: json
-    status_code: [200, 400, 500]
+- name: Add admin user via curl
+  ansible.builtin.command: >
+    curl -s -w "%{http_code}" -o /tmp/add_admin_response.txt
+    -X POST
+    -H "Content-Type: application/json"
+    -H "Authorization: Bearer {{ netmaker_master_key }}"
+    -d '{{ lookup("template", "createadminuser.json.j2") | to_json }}'
+    https://api.{{ netmaker_base_domain }}/api/users/{{ netmaker_admin_username }}
+  register: curl_response
+  changed_when: false
+  failed_when: curl_response.stdout not in ["200", "400", "500"]
+
 
 - name: Get all existing networks 
   uri:

@@ -1,18 +1,14 @@
 - name: Install netclient gpgkey
-  command: >
-    wget
-    -O /etc/apt/trusted.gpg.d/netclient.asc
-    https://apt.netmaker.org/gpg.key
-  args:
-    creates: /etc/apt/trusted.gpg.d/netclient.asc
+  get_url:
+    url: https://apt.netmaker.org/gpg.key
+    dest: /etc/apt/trusted.gpg.d/netclient.asc
+    mode: 0777
 
 - name: Install netclient package repo
-  command: >
-    wget
-    -O /etc/apt/sources.list.d/netclient.list
-    https://apt.netmaker.org/debian.deb.txt
-  args:
-    creates: /etc/apt/sources.list.d/netclient.list
+  get_url:
+    url: https://apt.netmaker.org/debian.deb.txt
+    dest: /etc/apt/sources.list.d/netclient.list
+    mode: 0777
 
 - name: Update apt cache
   shell: apt update
@@ -24,38 +20,17 @@
       - netclient={{ netmaker_image_version }}-0
     state: present
 
-- name: Check if enrollment key list file exists and is non-empty
-  ansible.builtin.stat:
-    path: "{{ netmaker_enrollment_key_list_file_location }}"
-  register: enrollment_key_file_stat
-
-- name: Fail if enrollment key list file is empty
-  ansible.builtin.fail:
-    msg: "Enrollment key list file exists but is empty ([]), cannot continue."
-  when: enrollment_key_file_stat.stat.exists and enrollment_key_file_stat.stat.size <= 2
-
-- name: Load JSON content from file
-  ansible.builtin.set_fact:
-    enrollment_key_list: "{{ lookup('file', netmaker_enrollment_key_list_file_location) | from_json }}"
-  when: enrollment_key_file_stat.stat.exists and enrollment_key_file_stat.stat.size > 2
-
-
 - name: set token from local file
   vars:
     query: "[?tags[0]=='{{ item }}'].token"
   set_fact:
-    netmaker_join_tokens: "{{ netmaker_join_tokens | default([]) + [ (enrollment_key_file_content.content | from_json | json_query(query) | first) ] }}"
-  when:
-    - enrollment_key_file_content.content is defined
-    - (enrollment_key_file_content.content | from_json is defined)
-    - (enrollment_key_file_content.content | from_json | json_query(query) | first) is defined
+    netmaker_join_tokens: "{{ netmaker_join_tokens + [lookup('file', netmaker_enrollment_key_list_file_location) | from_json | json_query(query) | first] }}"
+  when: "not netmaker_join_tokens"
   loop: "{{ netclient_enrollment_keys }}"
-  # ignore_errors: true
-
 
 - name: join netmaker network
   command: "netclient join -t {{ item }}"
-  loop: "{{ netmaker_join_tokens | default([]) }}"
+  loop: "{{ netmaker_join_tokens }}"
 
 - name: Ensure Netmaker client configuration directory exists
   file:

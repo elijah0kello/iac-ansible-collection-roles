@@ -74,6 +74,10 @@
   changed_when: false
   failed_when: curl_response.stdout[-3:] != "200"
 
+- name: Debug full curl response
+  debug:
+    msg: "{{ curl_response.stdout }}"
+    
 - name: Set the response body as a fact
   set_fact:
     key_response: "{{ curl_response.stdout[:-3] | from_json }}"

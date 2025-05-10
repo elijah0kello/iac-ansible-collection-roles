@@ -133,14 +133,11 @@
   debug:
     msg: "Writing keys to: {{ netmaker_enrollment_key_list_file_location }}"
 
-- name: Save key file to local
+- name: Ensure proper JSON content is written (not stringified list)
   copy:
-    content: "{{ key_response2 }}"
+    content: "{{ key_response2 | to_json }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
-
-
-
 
 # - name: Save access token for bastion netclient
 #   vars:

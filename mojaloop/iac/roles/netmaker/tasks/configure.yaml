@@ -129,6 +129,10 @@
   debug:
     msg: "{{ key_response2 }}"
 
+- name: Debug target file path
+  debug:
+    msg: "Writing keys to: {{ netmaker_enrollment_key_list_file_location }}"
+
 - name: Copy keys to the local machine
   copy:
     content: "{{ key_response2 | to_nice_json }}"

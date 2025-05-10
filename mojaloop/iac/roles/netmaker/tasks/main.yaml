@@ -4,11 +4,3 @@
 #   when: not teardown
 # - include_tasks: remove.yaml
 #   when: teardown  
-- include_tasks: install.yaml
-  when: false
-
-- include_tasks: configure.yaml
-  when: false
-
-- include_tasks: remove.yaml
-  when: false

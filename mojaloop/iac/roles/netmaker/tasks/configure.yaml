@@ -125,15 +125,17 @@
       {% if body %}{{ body | from_json }}{% else %}[] {% endif %}
   when: curl_response2.stdout[-3:] == "200"
 
-- name: Save updated key response into key_response
-  set_fact:
-    key_response: "{{ key_response2 }}"
+- name: Debug Key Response 2 
+  debug:
+    msg: "{{ key_response2 }}"
 
 - name: Copy keys to the local machine
   copy:
-    content: "{{ key_response | to_nice_json }}"
+    content: "{{ key_response2 | to_nice_json }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
+
+
 
 
 # - name: Save access token for bastion netclient

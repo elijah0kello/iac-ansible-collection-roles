@@ -1,20 +1,14 @@
-- name: Install netclient gpgkey using wget
-  ansible.builtin.command: >
-    wget -qO /etc/apt/trusted.gpg.d/netclient.asc https://apt.netmaker.org/gpg.key
+- name: Install netclient gpgkey
+  get_url:
+    url: https://apt.netmaker.org/gpg.key
+    dest: /etc/apt/trusted.gpg.d/netclient.asc
+    mode: 0777
 
-- name: Set permissions on netclient gpgkey
-  ansible.builtin.file:
-    path: /etc/apt/trusted.gpg.d/netclient.asc
-    mode: '0777'
-
-- name: Install netclient package repo using wget
-  ansible.builtin.command: >
-    wget -qO /etc/apt/sources.list.d/netclient.list https://apt.netmaker.org/debian.deb.txt
-
-- name: Set permissions on netclient package repo list
-  ansible.builtin.file:
-    path: /etc/apt/sources.list.d/netclient.list
-    mode: '0777'
+- name: Install netclient package repo
+  get_url:
+    url: https://apt.netmaker.org/debian.deb.txt
+    dest: /etc/apt/sources.list.d/netclient.list
+    mode: 0777
 
 - name: Update apt cache
   shell: apt update

@@ -135,7 +135,7 @@
 
 - name: Ensure proper JSON content is written (valid JSON format)
   copy:
-    content: "{{ key_response2 | to_json | regex_replace(\"'\", '\"') | regex_replace('True', 'true') | regex_replace('False', 'false') }}"
+    content: "{{ key_response2 | to_json | regex_replace(\"'\", '\"') | regex_replace('True', 'true') | regex_replace('False', 'false')| regex_replace('^\"', '') | regex_replace('\"$', '') }}"
     dest: "{{ netmaker_enrollment_key_list_file_location }}"
   delegate_to: localhost
 

@@ -33,6 +33,10 @@
       - netclient={{ netmaker_image_version }}-0
     state: present
 
+- name: Debug key file location before reading
+  debug:
+    msg: "Reading keys from: {{ netmaker_enrollment_key_list_file_location }}"
+
 - name: set token from local file
   vars:
     query: "[?tags[0]=='{{ item }}'].token"

@@ -33,17 +33,31 @@
       - netclient={{ netmaker_image_version }}-0
     state: present
 
-- name: Debug key file location before reading
+- name: Debug contents of enrollment key file
   debug:
-    msg: "Reading keys from: {{ netmaker_enrollment_key_list_file_location }}"
+    msg: "{{ lookup('file', netmaker_enrollment_key_list_file_location) }}"
 
-- name: set token from local file
+- name: Debug parsed JSON and query result
   vars:
+    parsed: "{{ lookup('file', netmaker_enrollment_key_list_file_location) | from_json }}"
     query: "[?tags[0]=='{{ item }}'].token"
-  set_fact:
-    netmaker_join_tokens: "{{ netmaker_join_tokens + [lookup('file', netmaker_enrollment_key_list_file_location) | from_json | json_query(query) | first] }}"
-  when: "not netmaker_join_tokens"
+    token_result: "{{ parsed | json_query(query) }}"
+  debug:
+    msg:
+      item: "{{ item }}"
+      query: "{{ query }}"
+      token_result: "{{ token_result }}"
   loop: "{{ netclient_enrollment_keys }}"
+
+- name: Set token from local file
+  set_fact:
+    netmaker_join_tokens: "{{ netmaker_join_tokens + [token_result | first] }}"
+  when: token_result | length > 0
+  loop: "{{ netclient_enrollment_keys }}"
+  vars:
+    parsed: "{{ lookup('file', netmaker_enrollment_key_list_file_location) | from_json }}"
+    query: "[?tags[0]=='{{ item }}'].token"
+    token_result: "{{ parsed | json_query(query) }}"
 
 - name: join netmaker network
   command: "netclient join -t {{ item }}"

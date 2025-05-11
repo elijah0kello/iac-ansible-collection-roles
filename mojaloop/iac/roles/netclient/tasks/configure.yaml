@@ -2,14 +2,14 @@
   shell: "netclient list"
   register: _result
 ##get networks from netclient command line netclient list, loop over networks with nodeid
-- name: Add egress gw
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}/creategateway
-    method: POST
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    body: "{{ lookup('template', 'creategw.json.j2') }}"
-    body_format: json
-    status_code: [200, 400]
+- name: Add egress gw using curl
+  shell: |
+    curl -s -o /dev/null -w "%{http_code}" \
+      -X POST "https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}/creategateway" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {{ netmaker_master_key }}" \
+      -d '{{ lookup("template", "creategw.json.j2") | to_json }}'
+  register: curl_result
   loop: "{{ _result.stdout }}"
+  changed_when: curl_result.stdout != "200"
+  failed_when: curl_result.stdout not in ["200", "400"]

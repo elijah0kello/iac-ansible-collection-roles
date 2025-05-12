@@ -18,6 +18,10 @@
     dest: "{{ minio_work_dir }}/docker-compose.yml"
   notify: Restart MinIO service
 
+- name: "Minio has been deployed"
+  debug:
+    msg: "Minio has been deployed"
+
 - name: "Create systemd service for minio"
   template:
     src: "../templates/minio.service.j2"

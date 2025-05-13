@@ -8,9 +8,11 @@
 
 - name: Find the networks to be deleted
   set_fact:
-     networks_to_delete: '{{ ( networks_to_delete | list ) + ( [ {"network_name": item.netid}] | list )}}'
+    networks_to_delete: '{{ (networks_to_delete | default([])) + [ {"network_name": item.netid} ] }}'
   when: netmaker_networks | selectattr('network_name','equalto',item.netid) | list | count == 0
-  with_items: "{{ existing_netmaker_networks.content  | from_json }}"
+  loop: "{{ existing_netmaker_networks.stdout | from_json }}"
+  loop_control:
+    label: "{{ item.netid }}"
 
 - name: Get existing enrollment keys using curl
   shell: |
@@ -22,9 +24,11 @@
 
 - name: Find the enrollment keys to be deleted
   set_fact:
-     keys_to_delete: "{{ ( keys_to_delete | list ) + ( [ {'key': item.value}] | list )}}"
-  when: netmaker_networks | selectattr('network_name','equalto' , ( item.networks | join(',') )) | list | count == 0 
-  with_items: "{{ existing_entrollment_keys.content | from_json }}"
+    keys_to_delete: "{{ (keys_to_delete | default([])) + [ {'key': item.value} ] }}"
+  when: netmaker_networks | selectattr('network_name', 'equalto', (item.networks | join(','))) | list | count == 0
+  loop: "{{ existing_entrollment_keys.stdout | from_json }}"
+  loop_control:
+    label: "{{ item.value }}"
 
 - name: Delete networks in Netmaker using curl
   shell: |

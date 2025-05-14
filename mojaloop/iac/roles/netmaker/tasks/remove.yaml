@@ -1,53 +1,53 @@
-- name: Get existing networks using curl
-  shell: |
-    curl -s -X GET "https://api.{{ netmaker_base_domain }}/api/networks" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer {{ netmaker_master_key }}"
-  register: existing_netmaker_networks
-  changed_when: false
+# - name: Get existing networks using curl
+#   shell: |
+#     curl -s -X GET "https://api.{{ netmaker_base_domain }}/api/networks" \
+#       -H "Content-Type: application/json" \
+#       -H "Authorization: Bearer {{ netmaker_master_key }}"
+#   register: existing_netmaker_networks
+#   changed_when: false
 
-- name: Find the networks to be deleted
-  set_fact:
-    networks_to_delete: '{{ (networks_to_delete | default([])) + [ {"network_name": item.netid} ] }}'
-  when: netmaker_networks | selectattr('network_name','equalto',item.netid) | list | count == 0
-  loop: "{{ existing_netmaker_networks.stdout | from_json }}"
-  loop_control:
-    label: "{{ item.netid }}"
+# - name: Find the networks to be deleted
+#   set_fact:
+#     networks_to_delete: '{{ (networks_to_delete | default([])) + [ {"network_name": item.netid} ] }}'
+#   when: netmaker_networks | selectattr('network_name','equalto',item.netid) | list | count == 0
+#   loop: "{{ existing_netmaker_networks.stdout | from_json }}"
+#   loop_control:
+#     label: "{{ item.netid }}"
 
-- name: Get existing enrollment keys using curl
-  shell: |
-    curl -s -X GET "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer {{ netmaker_master_key }}"
-  register: existing_entrollment_keys
-  changed_when: false
+# - name: Get existing enrollment keys using curl
+#   shell: |
+#     curl -s -X GET "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys" \
+#       -H "Content-Type: application/json" \
+#       -H "Authorization: Bearer {{ netmaker_master_key }}"
+#   register: existing_entrollment_keys
+#   changed_when: false
 
-- name: Find the enrollment keys to be deleted
-  set_fact:
-    keys_to_delete: "{{ (keys_to_delete | default([])) + [ {'key': item.value} ] }}"
-  when: netmaker_networks | selectattr('network_name', 'equalto', (item.networks | join(','))) | list | count == 0
-  loop: "{{ existing_entrollment_keys.stdout | from_json }}"
-  loop_control:
-    label: "{{ item.value }}"
+# - name: Find the enrollment keys to be deleted
+#   set_fact:
+#     keys_to_delete: "{{ (keys_to_delete | default([])) + [ {'key': item.value} ] }}"
+#   when: netmaker_networks | selectattr('network_name', 'equalto', (item.networks | join(','))) | list | count == 0
+#   loop: "{{ existing_entrollment_keys.stdout | from_json }}"
+#   loop_control:
+#     label: "{{ item.value }}"
 
-- name: Delete networks in Netmaker using curl
-  shell: |
-    curl -s -X DELETE "https://api.{{ netmaker_base_domain }}/api/networks/{{ item.network_name }}" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer {{ netmaker_master_key }}"
-  loop: "{{ networks_to_delete }}"
-  loop_control:
-    label: "{{ item.network_name }}"
-  register: deleted_networks
-  changed_when: false
+# - name: Delete networks in Netmaker using curl
+#   shell: |
+#     curl -s -X DELETE "https://api.{{ netmaker_base_domain }}/api/networks/{{ item.network_name }}" \
+#       -H "Content-Type: application/json" \
+#       -H "Authorization: Bearer {{ netmaker_master_key }}"
+#   loop: "{{ networks_to_delete }}"
+#   loop_control:
+#     label: "{{ item.network_name }}"
+#   register: deleted_networks
+#   changed_when: false
 
-- name: Delete enrollment keys in Netmaker using curl
-  shell: |
-    curl -s -X DELETE "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys/{{ item.key }}" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer {{ netmaker_master_key }}"
-  loop: "{{ keys_to_delete }}"
-  loop_control:
-    label: "{{ item.key }}"
-  register: deleted_enrollment_keys
-  changed_when: false
+# - name: Delete enrollment keys in Netmaker using curl
+#   shell: |
+#     curl -s -X DELETE "https://api.{{ netmaker_base_domain }}/api/v1/enrollment-keys/{{ item.key }}" \
+#       -H "Content-Type: application/json" \
+#       -H "Authorization: Bearer {{ netmaker_master_key }}"
+#   loop: "{{ keys_to_delete }}"
+#   loop_control:
+#     label: "{{ item.key }}"
+#   register: deleted_enrollment_keys
+#   changed_when: false

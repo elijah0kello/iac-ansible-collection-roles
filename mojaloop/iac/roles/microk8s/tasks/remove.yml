@@ -1,22 +1,22 @@
-# for on premise installations
-- name: Reset microk8s
-  become: true
-  command: "microk8s reset"
-  ignore_errors: true
+# # for on premise installations
+# - name: Reset microk8s
+#   become: true
+#   command: "microk8s reset"
+#   ignore_errors: true
 
-- name: Remove microk8s
-  become: true
-  command: "snap remove --purge microk8s"
-  ignore_errors: true
+# - name: Remove microk8s
+#   become: true
+#   command: "snap remove --purge microk8s"
+#   ignore_errors: true
 
-- name: Remove microk8s data
-  become: true
-  ansible.builtin.file:
-    state: absent
-    path: "{{ microk8s_root_path }}"
+# - name: Remove microk8s data
+#   become: true
+#   ansible.builtin.file:
+#     state: absent
+#     path: "{{ microk8s_root_path }}"
 
-- name: Remove longhorn data
-  become: true
-  ansible.builtin.file:
-    state: absent
-    path: "{{ longhorn_data_path }}"
+# - name: Remove longhorn data
+#   become: true
+#   ansible.builtin.file:
+#     state: absent
+#     path: "{{ longhorn_data_path }}"

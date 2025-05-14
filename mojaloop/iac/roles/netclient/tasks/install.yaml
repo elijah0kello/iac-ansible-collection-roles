@@ -76,8 +76,8 @@
   
 # command to set ip link interface down
 - name: "Drop ip link inteface for netmaker down"
-  command: "ip link set {{ netclient_interface_name }} down"
+  command: "ip link set netmaker down"
   when: ansible_os_family == "Debian" or ansible_os_family == "Ubuntu"
 - name: "Drop ip link inteface for netmaker down"
-  command: "ip link set {{ netclient_interface_name }} down"
+  command: "ip link set netmaker down"
   when: ansible_os_family == "RedHat" or ansible_os_family == "CentOS"

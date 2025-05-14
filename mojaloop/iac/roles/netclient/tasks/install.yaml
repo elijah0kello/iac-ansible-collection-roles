@@ -38,6 +38,14 @@
 - name: join netmaker network
   command: "netclient join -t {{ item }}"
   loop: "{{ netmaker_join_tokens }}"
+- name: Ensure SSH is allowed after joining Netmaker (iptables)
+  become: true
+  command: "iptables -I INPUT -p tcp --dport 22 -j ACCEPT"
+  when: ansible_os_family == "Debian" or ansible_os_family == "Ubuntu"
+- name: Ensure SSH is allowed after joining Netmaker (nftables)
+  become: true
+  command: "nft insert rule inet filter INPUT tcp dport 22 accept"
+  when: ansible_os_family == "RedHat" or ansible_os_family == "CentOS"
 
 - name: Ensure Netmaker client configuration directory exists
   file:

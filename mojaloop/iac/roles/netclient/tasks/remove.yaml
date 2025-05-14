@@ -1,73 +1,73 @@
-- name: Get netclient list output
-  shell: "netclient list"
-  register: _bastion_netclient
+# - name: Get netclient list output
+#   shell: "netclient list"
+#   register: _bastion_netclient
 
-- set_fact:
-    network_list: '{% if "no such network" in _bastion_netclient.stdout %}{{ [] }}{% else %}{{ _bastion_netclient.stdout }}{% endif %}'
+# - set_fact:
+#     network_list: '{% if "no such network" in _bastion_netclient.stdout %}{{ [] }}{% else %}{{ _bastion_netclient.stdout }}{% endif %}'
 
-- name: delete bastion node
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}
-    method: DELETE
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200, 400]
-  loop: "{{ network_list }}"
+# - name: delete bastion node
+#   uri:
+#     url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}
+#     method: DELETE
+#     headers:
+#       Content-Type: application/json
+#       Authorization: Bearer {{ netmaker_master_key }}
+#     status_code: [200, 400]
+#   loop: "{{ network_list }}"
 
-- name: second attempt to delete bastion node
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}
-    method: DELETE
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200, 400]
-  loop: "{{ network_list }}"
+# - name: second attempt to delete bastion node
+#   uri:
+#     url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.node_id }}
+#     method: DELETE
+#     headers:
+#       Content-Type: application/json
+#       Authorization: Bearer {{ netmaker_master_key }}
+#     status_code: [200, 400]
+#   loop: "{{ network_list }}"
 
-- name: get nodes in env network
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ netmaker_env_network_name }}
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200, 400]
-  register: _env_nodes
+# - name: get nodes in env network
+#   uri:
+#     url: https://{{ netmaker_api_host }}/api/nodes/{{ netmaker_env_network_name }}
+#     method: GET
+#     headers:
+#       Content-Type: application/json
+#       Authorization: Bearer {{ netmaker_master_key }}
+#     status_code: [200, 400]
+#   register: _env_nodes
 
-- name: delete nodes in network
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.id }}
-    method: DELETE
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200, 400]
-  loop: "{{ _env_nodes.json }}"
+# - name: delete nodes in network
+#   uri:
+#     url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.id }}
+#     method: DELETE
+#     headers:
+#       Content-Type: application/json
+#       Authorization: Bearer {{ netmaker_master_key }}
+#     status_code: [200, 400]
+#   loop: "{{ _env_nodes.json }}"
 
-- name: second attempt to delete nodes in network
-  uri:
-    url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.id }}
-    method: DELETE
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200, 400]
-  loop: "{{ _env_nodes.json }}"
+# - name: second attempt to delete nodes in network
+#   uri:
+#     url: https://{{ netmaker_api_host }}/api/nodes/{{ item.network }}/{{ item.id }}
+#     method: DELETE
+#     headers:
+#       Content-Type: application/json
+#       Authorization: Bearer {{ netmaker_master_key }}
+#     status_code: [200, 400]
+#   loop: "{{ _env_nodes.json }}"
 
-- name: delete netclient host from netmaker server
-  uri:
-    url: https://{{ netmaker_api_host }}/api/hosts/{{ item.hostid }}
-    method: DELETE
-    headers:
-      Content-Type: application/json
-      Authorization: Bearer {{ netmaker_master_key }}
-    status_code: [200, 400]
-  loop: "{{ _env_nodes.json }}"
+# - name: delete netclient host from netmaker server
+#   uri:
+#     url: https://{{ netmaker_api_host }}/api/hosts/{{ item.hostid }}
+#     method: DELETE
+#     headers:
+#       Content-Type: application/json
+#       Authorization: Bearer {{ netmaker_master_key }}
+#     status_code: [200, 400]
+#   loop: "{{ _env_nodes.json }}"
 
-- name: remove netclient package
-  package:
-    name:
-      - wireguard
-      - netclient={{ netmaker_image_version }}-0
-    state: absent  
+# - name: remove netclient package
+#   package:
+#     name:
+#       - wireguard
+#       - netclient={{ netmaker_image_version }}-0
+#     state: absent  

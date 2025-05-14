@@ -58,4 +58,18 @@
   args:
     creates: /usr/local/bin/nmctl
 
+# disable netmaker interface
+- name: Disable netmaker interface
+  command: nmcli connection down {{ netmaker_interface_name }}
+  ignore_errors: yes
+  register: disable_interface
+  changed_when: disable_interface.rc == 0
+  when: ansible_os_family == "RedHat" or ansible_os_family == "CentOS"
+- name: Disable netmaker interface
+  command: nmcli connection down {{ netmaker_interface_name }}
+  ignore_errors: yes
+  register: disable_interface
+  changed_when: disable_interface.rc == 0
+  when: ansible_os_family == "Debian" or ansible_os_family == "Ubuntu"
+
   

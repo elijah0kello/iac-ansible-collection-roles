@@ -43,6 +43,14 @@
     dest: "{{ vault_root_dir }}/docker-compose.yml"
   notify: Restart Vault
 
+- name: "restart Vault"
+  systemd:
+    name: vault
+    state: restarted
+    enabled: true
+  notify: Restart Vault
+
+
 - name: "install Nginx"
   apt:
     name: nginx

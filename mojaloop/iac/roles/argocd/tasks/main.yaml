@@ -85,7 +85,7 @@
     | sed -e 's/__PILLAR__DNS__DOMAIN__/cluster.local/g' \
     | sed -e "s/__PILLAR__DNS__SERVER__/$(kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig get service --namespace kube-system kube-dns -o jsonpath='{.spec.clusterIP}')/g" \
     | sed -e 's/__PILLAR__LOCAL__DNS__/169.254.20.10/g' \
-    | kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -f -
+    | sudo kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -f -
   when: install_nodelocaldns
 
 - name: Install external-secrets
@@ -94,7 +94,7 @@
     helm --kubeconfig {{ kubeconfig_location }}/kubeconfig upgrade --install external-secrets external-secrets/external-secrets --version {{ external_secrets_version }} -n {{ external_secrets_namespace }} --create-namespace --set installCRDs=true
 
 - name: Try clustersecretstore create until successful
-  shell: kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -n {{ external_secrets_namespace }} -f {{ extsectmpvalues.path }}/external-secretstore.yaml
+  shell: sudo kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -n {{ external_secrets_namespace }} -f {{ extsectmpvalues.path }}/external-secretstore.yaml
   register: clustersecretstore
   until: clustersecretstore is not failed
   retries: 30
@@ -103,5 +103,5 @@
 - name: Install ArgoCD
   shell: |
     kustomize build {{ argotmpvalues.path }} > {{ argotmpvalues.path }}/argocd-deploy.yaml
-    kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -f {{ argotmpvalues.path }}/argocd-deploy.yaml
-    kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -f {{ argotmpvalues.path }}/argo-root-app.yaml
+    sudo kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -f {{ argotmpvalues.path }}/argocd-deploy.yaml
+    sudo kubectl --kubeconfig {{ kubeconfig_location }}/kubeconfig apply -f {{ argotmpvalues.path }}/argo-root-app.yaml

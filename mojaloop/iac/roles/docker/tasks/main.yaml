@@ -38,7 +38,7 @@
   when: docker_extra_vol_mount
 
 - name: Create a ext4 filesystem for extra vol
-  filesystem:
+  ansible.posix.filesystem:
     fstype: ext4
     dev: "{{ ebs_volume_device_name }}"
   when: docker_extra_vol_mount

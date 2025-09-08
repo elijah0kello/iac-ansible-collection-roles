@@ -42,13 +42,16 @@
 #     fstype: ext4
 #     dev: "{{ ebs_volume_device_name }}"
 #   when: docker_extra_vol_mount
-- name: Create a ext4 filesystem for extra vol using bash
+- name: Create ext4 filesystem for extra vol using env vars
   ansible.builtin.shell: |
-    if [ "{{ docker_extra_vol_mount | default('false') }}" = "true" ]; then
-      mkfs.ext4 -F "{{ ebs_volume_device_name }}"
+    if [ "$DOCKER_EXTRA_VOL_MOUNT" = "true" ]; then
+      mkfs.ext4 -F "$EBS_VOLUME_DEVICE_NAME"
     fi
   args:
     warn: false
+  environment:
+    DOCKER_EXTRA_VOL_MOUNT: "{{ docker_extra_vol_mount | default('false') }}"
+    EBS_VOLUME_DEVICE_NAME: "{{ ebs_volume_device_name }}"
 
 - name: Mount the extra vol disk
   mount:
